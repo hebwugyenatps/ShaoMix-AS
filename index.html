@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SillyAI 多模型图像生成客户端</title>
+    <title>ShaoMixLab实验室临时生图服务</title>
     <style>
         /* Win11 主题变量 - 规范统一 */
         :root {
@@ -1549,7 +1549,7 @@
     <header>
         <h1>
             <span>🎨</span>
-            SillyAI 多模型图像生成客户端
+            ShaoMixLab实验室临时生图服务
         </h1>
         <div class="header-right">
             <select class="model-selector" id="modelSelector">
@@ -1584,18 +1584,7 @@
                         <span class="label-tip">选择预设地址或自定义填写</span>
                     </label>
                     <select id="apiBaseUrl" required>
-                        <option value="http://64.186.244.43:12001">http://64.186.244.43:12001 (默认1)</option>
-                        <option value="http://38.145.218.40:12001">http://38.145.218.40:12001 (默认2)</option>
-                        <option value="http://103.214.172.26:12001">http://103.214.172.26:12001 (默认3)</option>
-                        <option value="http://64.32.31.178:3009">http://64.32.31.178:3009（新渠道）</option>
-                        <option value="https://maoyulin.xyz">https://maoyulin.xyz（新渠道）</option>
-                        <option value="https://api.liangrekui.com">https://api.liangrekui.com（新渠道）</option>
-                        <option value="https://api.mnapi.com">https://api.mnapi.com（新渠道）</option>
-                        <option value="https://api.laogou8.com">https://api.laogou8.com（新渠道）</option>
-                        <option value="https://www.codexauv.com">https://www.codexauv.com（新渠道）</option>
-                        <option value="https://yuepa8.com">https://yuepa8.com（新渠道）</option>
-                        <option value="https://api.apilio.ai">https://api.apilio.ai（新渠道）</option>
-                        <option value="https://ailyl.top">https://ailyl.top（新渠道）</option>
+                        <option value="https://yrzsai.com">https://yrzsai.com</option>
                         <option value="custom">自定义地址</option>
                     </select>
                     <div class="custom-input" id="customApiBaseUrl">
@@ -2149,7 +2138,7 @@
         // 模型默认配置
         const MODEL_DEFAULTS = {
             gemini: {
-                modelName: '「Rim」gemini-3.1-flash-image-preview',
+                modelName: 'gemini-3.1-flash-image',
                 maxImages: 15,
                 imageSizes: [
                     { value: '512', label: '512px (0.5K) 仅Flash系列' },
@@ -2164,7 +2153,7 @@
                 showMask: false
             },
             'gpt-image-2-text': {
-                modelName: '「CS」gpt-image-2',
+                modelName: 'gpt-image-2',
                 maxImages: 0,
                 imageSizes: [
                     { value: '1024x1024', label: '1024x1024 (square)' },
@@ -2185,7 +2174,7 @@
                 showMask: false
             },
             'gpt-image-2-edit': {
-                modelName: '「CS」gpt-image-2',
+                modelName: 'gpt-image-2',
                 maxImages: 15,
                 imageSizes: [
                     { value: '1024x1024', label: '1024x1024 (square)' },
@@ -4042,7 +4031,7 @@
             resetBtn.addEventListener('click', () => {
                 if (confirm('确定要重置所有参数和已上传的图片吗？')) {
                     apiKey.value = '';
-                    apiBaseUrl.value = 'http://64.186.244.43:12001';
+                    apiBaseUrl.value = 'https://yrzsai.com';
                     customApiBaseUrl.classList.remove('show');
                     customApiBaseUrlInput.value = '';
                     
