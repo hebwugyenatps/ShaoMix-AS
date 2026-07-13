@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShaoMixAI 多模型图像生成客户端</title>
+    <title>SillyAI 多模型图像生成客户端</title>
     <style>
         /* Win11 主题变量 - 规范统一 */
         :root {
@@ -86,6 +86,21 @@
             display: flex;
             align-items: center;
             gap: 16px;
+        }
+        .model-selector {
+            background: var(--win-input-bg);
+            border: 1px solid var(--win-border);
+            border-radius: var(--win-radius);
+            padding: 8px 16px;
+            color: var(--win-text-primary);
+            cursor: pointer;
+            transition: var(--win-transition);
+            font-size: 13px;
+            min-width: 220px;
+        }
+        .model-selector:hover {
+            background: var(--win-accent-light);
+            border-color: var(--win-accent);
         }
         /* 修复：主题切换按钮文字换行 */
         .theme-toggle {
@@ -227,72 +242,6 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
-        .size-combobox {
-            position: relative;
-        }
-        .size-combobox input {
-            padding-right: 44px;
-        }
-        .size-dropdown-toggle {
-            position: absolute;
-            top: 1px;
-            right: 1px;
-            bottom: 1px;
-            width: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
-            border-left: 1px solid var(--win-input-border);
-            border-radius: 0 var(--win-radius) var(--win-radius) 0;
-            background: transparent;
-            color: var(--win-text-secondary);
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 14px;
-            transition: var(--win-transition);
-        }
-        .size-dropdown-toggle:hover {
-            background: var(--win-accent-light);
-            color: var(--win-accent);
-        }
-        .size-dropdown-menu {
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: calc(100% + 4px);
-            z-index: 50;
-            display: none;
-            max-height: 260px;
-            overflow-y: auto;
-            padding: 4px;
-            background: var(--win-card-bg);
-            border: 1px solid var(--win-border);
-            border-radius: var(--win-radius);
-            box-shadow: var(--win-shadow-lg);
-        }
-        .size-dropdown-menu.open {
-            display: block;
-        }
-        .size-option {
-            width: 100%;
-            padding: 9px 10px;
-            border: none;
-            border-radius: 6px;
-            background: transparent;
-            color: var(--win-text-primary);
-            text-align: left;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 14px;
-            line-height: 1.3;
-            transition: var(--win-transition);
-        }
-        .size-option:hover,
-        .size-option.active {
-            background: var(--win-accent-light);
-            color: var(--win-accent);
-        }
         textarea {
             resize: vertical;
             min-height: 100px;
@@ -315,6 +264,14 @@
         }
         .input-toggle:hover {
             color: var(--win-accent);
+        }
+        /* 自定义地址输入框联动样式 */
+        .custom-input {
+            margin-top: 8px;
+            display: none;
+        }
+        .custom-input.show {
+            display: block;
         }
         /* 图片上传区域优化 */
         .upload-area {
@@ -544,6 +501,26 @@
             border-radius: 4px;
         }
         /* 提示标签 */
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 6px;
+        }
+        .badge-flash {
+            background: rgba(0, 120, 212, 0.1);
+            color: var(--win-accent);
+        }
+        .badge-pro {
+            background: rgba(16, 124, 16, 0.1);
+            color: var(--win-success);
+        }
+        .badge-warning {
+            background: rgba(255, 170, 68, 0.1);
+            color: var(--win-warning);
+        }
         /* ========== 右侧面板：预览&控制台&历史记录 ========== */
         .right-panel {
             flex: 1;
@@ -1465,6 +1442,106 @@
             user-select: none;
             -webkit-user-drag: none;
         }
+        /* ==================== 【修复：蒙版预览按原比例显示】 ==================== */
+        .mask-upload-area {
+            border: 2px dashed var(--win-warning);
+            background: rgba(255, 170, 68, 0.05);
+        }
+        .mask-upload-area:hover, .mask-upload-area.dragover {
+            border-color: var(--win-warning);
+            background: rgba(255, 170, 68, 0.1);
+        }
+        .mask-upload-area .icon {
+            color: var(--win-warning);
+        }
+        /* 蒙版预览容器 - 参考参考图上传模块布局 */
+        .mask-preview {
+            margin-top: 14px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+        /* 蒙版缩略图卡片 - 100%对齐参考图image-item样式 */
+        .mask-thumbnail {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: var(--win-radius);
+            overflow: hidden;
+            border: 1px solid var(--win-border);
+            transition: var(--win-transition);
+            cursor: pointer;
+            flex-shrink: 0;
+            z-index: 10; /* 新增：提高层级确保可点击 */
+        }
+
+        .mask-thumbnail.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--win-border);
+            border-top-color: var(--win-accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .mask-thumbnail:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--win-shadow);
+            border-color: var(--win-accent);
+        }
+        .mask-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            pointer-events: auto; /* 新增：确保图片可接收点击事件 */
+        }
+        /* 修复蒙版显示状态 */
+        .mask-preview.show {
+            display: flex;
+        }
+        .mask-preview img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+        /* 蒙版删除按钮 - 完全对齐参考图image-delete样式 */
+        .mask-delete {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(216, 59, 1, 0.9);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            line-height: 1;
+            transition: var(--win-transition);
+            z-index: 10;
+        }
+        .mask-delete:hover {
+            background: var(--win-danger);
+            transform: scale(1.1);
+        }
+        /* 蒙版说明文字 */
+        .mask-label {
+            font-size: 12px;
+            color: var(--win-text-secondary);
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -1472,9 +1549,14 @@
     <header>
         <h1>
             <span>🎨</span>
-            ShaoMixAI 多模型图像生成客户端
+            SillyAI 多模型图像生成客户端
         </h1>
         <div class="header-right">
+            <select class="model-selector" id="modelSelector">
+                <option value="gemini">Gemini 图像生成</option>
+                <option value="gpt-image-2-text">GPT-image-2 文生图</option>
+                <option value="gpt-image-2-edit">GPT-image-2 图像编辑</option>
+            </select>
             <button class="theme-toggle" id="themeToggle">切换深色模式</button>
         </div>
     </header>
@@ -1497,39 +1579,41 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="baseUrl">
-                        Base URL
-                        <span class="label-tip">API服务基础地址，最终请求地址将与端点拼接</span>
+                    <label for="apiBaseUrl">
+                        API基础地址
+                        <span class="label-tip">选择预设地址或自定义填写</span>
                     </label>
-                    <input type="url" id="baseUrl" placeholder="http://localhost:8792/v1" value="http://localhost:8792/v1" required>
-                </div>
-                <div class="form-group">
-                    <label for="proxyUpstream">
-                        Proxy Upstream
-                        <span class="label-tip">Base URL 使用本地代理时，选择实际转发到哪个上游</span>
-                    </label>
-                    <select id="proxyUpstream"></select>
-                </div>
-                <div class="form-group">
-                    <label for="apiEndpoint">
-                        API端点
-                        <span class="label-tip">API接口路径，将与Base URL拼接为最终请求地址</span>
-                    </label>
-                    <input type="text" id="apiEndpoint" placeholder="/responses" value="/responses" required>
+                    <select id="apiBaseUrl" required>
+                        <option value="http://64.186.244.43:12001">http://64.186.244.43:12001 (默认1)</option>
+                        <option value="http://38.145.218.40:12001">http://38.145.218.40:12001 (默认2)</option>
+                        <option value="http://103.214.172.26:12001">http://103.214.172.26:12001 (默认3)</option>
+                        <option value="http://64.32.31.178:3009">http://64.32.31.178:3009（新渠道）</option>
+                        <option value="https://maoyulin.xyz">https://maoyulin.xyz（新渠道）</option>
+                        <option value="https://api.liangrekui.com">https://api.liangrekui.com（新渠道）</option>
+                        <option value="https://api.mnapi.com">https://api.mnapi.com（新渠道）</option>
+                        <option value="https://api.laogou8.com">https://api.laogou8.com（新渠道）</option>
+                        <option value="https://www.codexauv.com">https://www.codexauv.com（新渠道）</option>
+                        <option value="https://yuepa8.com">https://yuepa8.com（新渠道）</option>
+                        <option value="https://api.apilio.ai">https://api.apilio.ai（新渠道）</option>
+                        <option value="https://ailyl.top">https://ailyl.top（新渠道）</option>
+                        <option value="custom">自定义地址</option>
+                    </select>
+                    <div class="custom-input" id="customApiBaseUrl">
+                        <input type="text" placeholder="请输入自定义API基础地址" id="customApiBaseUrlInput">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="modelType">
-                        模型名称 (model)
-                        <span class="label-tip">Responses 请求体顶层 model 参数</span>
+                        模型名称 (model_type)
+                        <span class="label-tip">系统将自动按规则拼接完整请求地址</span>
                     </label>
-                    <input type="text" id="modelType" value="gpt-5.5" placeholder="请输入模型名称" required>
-                </div>
-                <div class="form-group">
-                    <label for="imageModel">
-                        image-model
-                        <span class="label-tip">tools 中 image_generation 的 model 参数</span>
-                    </label>
-                    <input type="text" id="imageModel" value="gpt-image-2" placeholder="请输入图像模型名称" required>
+                    <input 
+                        type="text" 
+                        id="modelType" 
+                        placeholder="请输入模型名称" 
+                        value="「Rim」gemini-3.1-flash-image-preview" 
+                        required
+                    >
                 </div>
             </div>
             <!-- 卡片2：生成基础参数配置 -->
@@ -1539,27 +1623,61 @@
                     生成基础参数配置
                     <span class="tip">适配提示</span>
                 </h2>
-                <div class="form-group">
-                    <label for="imageSize">图像尺寸 (size) <span class="label-tip">对应 tools.size，可自定义输入</span></label>
-                    <div class="size-combobox" id="imageSizeCombo">
-                        <input type="text" id="imageSize" value="1024x1792" placeholder="例如 1024x1024 或 auto" autocomplete="off" aria-haspopup="listbox" aria-expanded="false" aria-controls="imageSizeDropdownMenu" required>
-                        <button type="button" class="size-dropdown-toggle" id="imageSizeDropdownBtn" aria-label="展开图像尺寸列表" aria-expanded="false">▼</button>
-                        <div class="size-dropdown-menu" id="imageSizeDropdownMenu" role="listbox">
-                            <button type="button" class="size-option" role="option" data-size="1024x1024">1024x1024</button>
-                            <button type="button" class="size-option" role="option" data-size="1024x1536">1024x1536</button>
-                            <button type="button" class="size-option" role="option" data-size="1536x1024">1536x1024</button>
-                            <button type="button" class="size-option" role="option" data-size="2048x2048">2048x2048</button>
-                            <button type="button" class="size-option" role="option" data-size="2048x1152">2048x1152</button>
-                            <button type="button" class="size-option" role="option" data-size="2560x1440">2560x1440</button>
-                            <button type="button" class="size-option" role="option" data-size="1440x2560">1440x2560</button>
-                            <button type="button" class="size-option" role="option" data-size="3840x2160">3840x2160</button>
-                            <button type="button" class="size-option" role="option" data-size="2160x3840">2160x3840</button>
-                            <button type="button" class="size-option" role="option" data-size="auto">auto</button>
-                        </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="imageSize">生成分辨率 (imageSize) <span class="label-tip" id="resolutionTip"></span></label>
+                        <select id="imageSize" required>
+                            <!-- 选项将根据模型动态生成 -->
+                        </select>
+                    </div>
+                    <!-- 新增：自定义尺寸输入区域 -->
+                    <div class="form-group" id="customSizeGroup" style="display: none;">
+                        <label for="customSize">自定义尺寸 <span class="label-tip">格式：宽x高，如3547x1569，将自动调整为16的倍数</span></label>
+                        <input type="text" id="customSize" placeholder="例如：3547x1569" pattern="^\d+x\d+$">
+                    </div>
+                    <div class="form-group" id="aspectRatioGroup">
+                        <label for="aspectRatio">宽高比 (aspectRatio) <span class="label-tip" id="aspectRatioTip"></span></label>
+                        <select id="aspectRatio" required>
+                            <option value="1:1" selected>1:1 正方形 (全系列通用)</option>
+                            <option value="8:1">8:1 超宽屏 <span class="badge badge-flash">仅Flash系列</span></option>
+                            <option value="4:1">4:1 超宽屏 <span class="badge badge-flash">仅Flash系列</span></option>
+                            <option value="21:9">21:9 电影宽屏 (全系列通用)</option>
+                            <option value="16:9">16:9 宽屏 (全系列通用)</option>
+                            <option value="3:2">3:2 标准横屏 (全系列通用)</option>
+                            <option value="4:3">4:3 标屏 (全系列通用)</option>
+                            <option value="5:4">5:4 竖屏 (全系列通用)</option>
+                            <option value="4:5">4:5 竖屏 (全系列通用)</option>
+                            <option value="3:4">3:4 竖屏 (全系列通用)</option>
+                            <option value="2:3">2:3 竖屏 (全系列通用)</option>
+                            <option value="9:16">9:16 全屏竖屏 (全系列通用)</option>
+                            <option value="1:4">1:4 超长竖屏 <span class="badge badge-flash">仅Flash系列</span></option>
+                            <option value="1:8">1:8 超长竖屏 <span class="badge badge-flash">仅Flash系列</span></option>
+                        </select>
                     </div>
                 </div>
             </div>
-            <!-- 卡片3：重试与超时配置 -->
+            <!-- 卡片3：生成高级参数配置（新增） -->
+            <div class="card" id="advancedParamsCard">
+                <h2 class="card-title">
+                    <span>⚙️</span>
+                    生成高级参数配置
+                </h2>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label for="batchSize">批次大小 (n) <span class="label-tip">单次生成数量</span></label>
+                        <input type="number" id="batchSize" min="1" max="10" value="1" required>
+                    </div>
+                    <div class="form-group" id="seedGroup">
+                        <label for="seed">随机种子 (seed) <span class="label-tip">可选，固定生成结果</span></label>
+                        <input type="number" id="seed" min="0" max="999999999" placeholder="留空随机">
+                    </div>
+                    <div class="form-group" id="topPGroup">
+                        <label for="topP">核采样 (top_p) <span class="label-tip">默认0.95</span></label>
+                        <input type="number" id="topP" min="0" max="1" step="0.01" value="0.95" required>
+                    </div>
+                </div>
+            </div>
+            <!-- 卡片4：重试与超时配置 -->
             <div class="card">
                 <h2 class="card-title">
                     <span>🔄</span>
@@ -1580,7 +1698,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 卡片4：生成提示词 -->
+            <!-- 卡片5：生成提示词 -->
             <div class="card">
                 <h2 class="card-title">
                     <span>✏️</span>
@@ -1591,7 +1709,7 @@
                     <textarea id="prompt" placeholder="请输入图像生成提示词，支持多轮复杂描述，可结合参考图进行生成" required></textarea>
                 </div>
             </div>
-            <!-- 卡片5：参考图片 -->
+            <!-- 卡片6：参考图片 -->
             <div class="card" id="referenceImagesCard">
                 <h2 class="card-title">
                     <span>🖼️</span>
@@ -1601,11 +1719,32 @@
                 <div class="upload-area" id="uploadArea">
                     <div class="icon">📸</div>
                     <p>点击选择图片 或 拖拽图片到此处上传</p>
-                    <p class="label-tip">支持JPG、PNG、WebP格式，最多<span id="maxImageCount">14</span>张参考图</p>
+                    <p class="label-tip">支持JPG、PNG、WebP格式，最多<span id="maxImageCount">15</span>张参考图</p>
                 </div>
                 <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
                 <div class="image-list" id="imageList"></div>
                 <p class="image-count" id="imageCount">已上传 0 张图片</p>
+            </div>
+            <!-- 卡片7：蒙版图像（仅GPT-image-2图像编辑显示） -->
+            <div class="card" id="maskImageCard" style="display: none;">
+                <h2 class="card-title">
+                    <span>🎭</span>
+                    蒙版图像
+                    <span class="tip">选填，最多1张</span>
+                </h2>
+                <div class="upload-area mask-upload-area" id="maskUploadArea">
+                    <div class="icon">🎭</div>
+                    <p>点击选择蒙版图片 或 拖拽图片到此处上传</p>
+                    <p class="label-tip">白色区域为需要编辑的部分，黑色区域保留原图</p>
+                </div>
+                <input type="file" id="maskFileInput" accept="image/png" style="display: none;">
+                <div class="mask-preview" id="maskPreview">
+                    <div class="mask-thumbnail">
+                        <img id="maskPreviewImage" alt="蒙版预览">
+                        <button class="mask-delete" id="maskDeleteBtn">×</button>
+                    </div>
+                    <p class="mask-label">蒙版图像（白色区域为编辑部分）</p>
+                </div>
             </div>
             <!-- 操作按钮 -->
             <div class="card" style="border: 1px dashed var(--win-accent); background: var(--win-accent-light);">
@@ -1771,6 +1910,7 @@
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 const objectUrl = URL.createObjectURL(imageBlob);
+
                 img.onload = () => {
                     // 创建Canvas绘制图像，统一导出为PNG
                     const canvas = document.createElement('canvas');
@@ -1778,6 +1918,7 @@
                     canvas.height = img.naturalHeight;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0);
+
                     // 导出为PNG格式Blob，无损质量
                     canvas.toBlob(
                         (pngBlob) => {
@@ -1788,23 +1929,285 @@
                         1.0
                     );
                 };
+
                 img.onerror = (err) => {
                     URL.revokeObjectURL(objectUrl);
                     reject(new Error('图像转换为PNG格式失败'));
                 };
+
                 img.src = objectUrl;
             });
         }
-        // 全局变量
+
+        const UPLOAD_IMAGE_JPEG_QUALITY = 0.95;
+        const UPLOAD_IMAGE_SMALL_JPEG_MAX_BYTES = 500 * 1024;
+        const UPLOAD_IMAGE_MAX_PIXELS = 3680000;
+
+        async function isJpegUploadFile(file) {
+            if (!file) return false;
+            try {
+                const bytes = new Uint8Array(await file.slice(0, 3).arrayBuffer());
+                return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function makeJpegUploadName(fileName) {
+            const safeName = (fileName || 'image').trim() || 'image';
+            if (/\.(jpe?g)$/i.test(safeName)) {
+                return safeName.replace(/\.(jpe?g)$/i, '.jpg');
+            }
+            return safeName.replace(/\.[^/.\\]+$/, '') + '.jpg';
+        }
+
+        function readBlobAsDataUrl(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('图像读取失败'));
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function loadImageForCanvas(blob) {
+            if ('createImageBitmap' in window) {
+                try {
+                    const bitmap = await createImageBitmap(blob);
+                    return {
+                        source: bitmap,
+                        width: bitmap.width,
+                        height: bitmap.height,
+                        close: () => bitmap.close && bitmap.close()
+                    };
+                } catch (error) {
+                    if (typeof consoleLog === 'function') {
+                        consoleLog('warning', 'createImageBitmap解码失败，回退到Image对象', error);
+                    }
+                }
+            }
+
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const objectUrl = URL.createObjectURL(blob);
+                img.onload = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    resolve({
+                        source: img,
+                        width: img.naturalWidth || img.width,
+                        height: img.naturalHeight || img.height,
+                        close: () => {}
+                    });
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    reject(new Error('图像解码失败'));
+                };
+                img.src = objectUrl;
+            });
+        }
+
+        function canvasToJpegBlob(canvas) {
+            return new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('JPEG导出失败'));
+                    }
+                }, 'image/jpeg', UPLOAD_IMAGE_JPEG_QUALITY);
+            });
+        }
+
+        async function encodeLoadedImageAsJpeg(loadedImage, maxPixels = null) {
+            const sourcePixels = loadedImage.width * loadedImage.height;
+            let targetWidth = loadedImage.width;
+            let targetHeight = loadedImage.height;
+
+            if (maxPixels && sourcePixels > maxPixels) {
+                const scale = Math.sqrt(maxPixels / sourcePixels);
+                targetWidth = Math.max(1, Math.floor(loadedImage.width * scale));
+                targetHeight = Math.max(1, Math.floor(loadedImage.height * scale));
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas初始化失败');
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, targetWidth, targetHeight);
+            ctx.drawImage(loadedImage.source, 0, 0, targetWidth, targetHeight);
+
+            const jpegBlob = await canvasToJpegBlob(canvas);
+            const dataUrl = await readBlobAsDataUrl(jpegBlob);
+            const base64 = dataUrl.split(',')[1] || '';
+            return {
+                base64,
+                size: jpegBlob.size,
+                width: targetWidth,
+                height: targetHeight
+            };
+        }
+
+        async function normalizeUploadImageToJpeg(file) {
+            const jpegName = makeJpegUploadName(file.name);
+            const isJpeg = await isJpegUploadFile(file);
+
+            if (isJpeg && file.size <= UPLOAD_IMAGE_SMALL_JPEG_MAX_BYTES) {
+                const dataUrl = await readBlobAsDataUrl(file);
+                const base64 = dataUrl.split(',')[1] || '';
+                return {
+                    name: jpegName,
+                    mime_type: 'image/jpeg',
+                    base64,
+                    url: `data:image/jpeg;base64,${base64}`,
+                    size: file.size,
+                    width: null,
+                    height: null
+                };
+            }
+
+            const loadedImage = await loadImageForCanvas(file);
+            try {
+                const sourcePixels = loadedImage.width * loadedImage.height;
+                const limitJpegPixels = isJpeg && file.size > UPLOAD_IMAGE_SMALL_JPEG_MAX_BYTES && sourcePixels > UPLOAD_IMAGE_MAX_PIXELS;
+                let encoded = await encodeLoadedImageAsJpeg(loadedImage, limitJpegPixels ? UPLOAD_IMAGE_MAX_PIXELS : null);
+
+                if (!isJpeg && encoded.size > UPLOAD_IMAGE_SMALL_JPEG_MAX_BYTES && sourcePixels > UPLOAD_IMAGE_MAX_PIXELS) {
+                    encoded = await encodeLoadedImageAsJpeg(loadedImage, UPLOAD_IMAGE_MAX_PIXELS);
+                }
+
+                return {
+                    name: jpegName,
+                    mime_type: 'image/jpeg',
+                    base64: encoded.base64,
+                    url: `data:image/jpeg;base64,${encoded.base64}`,
+                    size: encoded.size,
+                    width: encoded.width,
+                    height: encoded.height
+                };
+            } finally {
+                loadedImage.close();
+            }
+        }
+
+        function storedReferenceImageToFile(imageRecord) {
+            const rawBase64 = String(imageRecord?.base64 || imageRecord?.url || '');
+            const base64 = rawBase64.includes(',') ? rawBase64.split(',').pop() : rawBase64;
+            if (!base64) throw new Error('参考图数据为空');
+
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            const mimeType = imageRecord?.mime_type || imageRecord?.mimeType || 'application/octet-stream';
+            return new File([bytes], imageRecord?.name || 'history-image', { type: mimeType });
+        }
+
+        async function normalizeStoredReferenceImagesToJpeg(imageRecords) {
+            const normalizedImages = [];
+            for (const imageRecord of imageRecords) {
+                normalizedImages.push(await normalizeUploadImageToJpeg(storedReferenceImageToFile(imageRecord)));
+            }
+            return normalizedImages;
+        }
+
+        // ==================== 新增：尺寸自动调整为16的倍数工具函数 ====================
+        /**
+        * 将任意尺寸自动调整为16的倍数（向上取整，保证不缩小用户需求）
+        * @param {number} width 原始宽度
+        * @param {number} height 原始高度
+        * @returns {Object} 调整后的宽高和拼接好的尺寸字符串
+        */
+        function adjustSizeTo16Multiple(width, height) {
+            // 向上取整到最近的16的倍数（AI模型通用要求）
+            const adjustedWidth = Math.ceil(width / 16) * 16;
+            const adjustedHeight = Math.ceil(height / 16) * 16;
+            return {
+                width: adjustedWidth,
+                height: adjustedHeight,
+                size: `${adjustedWidth}x${adjustedHeight}`
+            };
+        }
+
+        // 全局变量 - 修复致命变量名冲突，彻底分离模型类型变量与DOM元素ID
         let uploadedImages = [];
-        let currentMaxImages = 14;
-        let currentModel = 'gpt-5.5';
+        let currentMaxImages = 15;
+        let currentModel = '「Rim」gemini-3.1-flash-image-preview';
+        let currentModelType = 'flash'; // 修复：原modelType变量与DOM元素ID重名，改为currentModelType
         let abortController = null;
         let isGenerating = false;
         let currentImageBlobUrl = null;
         let currentImageBlob = null;
+        // ==================== 【新增】多模型支持全局变量 ====================
+        let currentEngine = 'gemini'; // 可选值: gemini, gpt-image-2-text, gpt-image-2-edit
+        let maskImage = null; // 存储蒙版图像数据
+        // 模型默认配置
+        const MODEL_DEFAULTS = {
+            gemini: {
+                modelName: '「Rim」gemini-3.1-flash-image-preview',
+                maxImages: 15,
+                imageSizes: [
+                    { value: '512', label: '512px (0.5K) 仅Flash系列' },
+                    { value: '1K', label: '1K (通用默认)' },
+                    { value: '2K', label: '2K', selected: true },
+                    { value: '4K', label: '4K' }
+                ],
+                showAspectRatio: true,
+                showSeed: true,
+                showTopP: true,
+                showReferenceImages: true,
+                showMask: false
+            },
+            'gpt-image-2-text': {
+                modelName: '「CS」gpt-image-2',
+                maxImages: 0,
+                imageSizes: [
+                    { value: '1024x1024', label: '1024x1024 (square)' },
+                    { value: '1024x1536', label: '1024x1536 (portrait)' },
+                    { value: '1536x1024', label: '1536x1024 (landscape)' },
+                    { value: '2048x2048', label: '2048x2048 (2K square)' },
+                    { value: '2048x1152', label: '2048x1152 (2K landscape)' },
+                    { value: '3840x2160', label: '3840x2160 (4K landscape)', selected: true },
+                    { value: '2160x3840', label: '2160x3840 (4K portrait)' },
+                    { value: 'auto', label: 'auto (自动)' },
+                    // 新增：自定义尺寸选项
+                    { value: 'custom', label: '自定义尺寸' }
+                ],
+                showAspectRatio: false,
+                showSeed: false,
+                showTopP: false,
+                showReferenceImages: false,
+                showMask: false
+            },
+            'gpt-image-2-edit': {
+                modelName: '「CS」gpt-image-2',
+                maxImages: 15,
+                imageSizes: [
+                    { value: '1024x1024', label: '1024x1024 (square)' },
+                    { value: '1024x1536', label: '1024x1536 (portrait)' },
+                    { value: '1536x1024', label: '1536x1024 (landscape)', selected: true },
+                    { value: '2048x2048', label: '2048x2048 (2K square)' },
+                    { value: '2048x1152', label: '2048x1152 (2K landscape)' },
+                    { value: '3840x2160', label: '3840x2160 (4K landscape)', },
+                    { value: '2160x3840', label: '2160x3840 (4K portrait)' },
+                    { value: 'auto', label: 'auto (自动)' },
+                    // 新增：自定义尺寸选项
+                    { value: 'custom', label: '自定义尺寸' }
+                ],
+                showAspectRatio: false,
+                showSeed: false,
+                showTopP: false,
+                showReferenceImages: true,
+                showMask: true
+            }
+        };
         // ==================== 【迁移新增】历史记录相关全局变量 ====================
-        const HISTORY_DB_NAME = 'asxs_api_image_history_db';
+        const HISTORY_DB_NAME = 'sillyai_gemini_history_db';
         const HISTORY_STORE_NAME = 'history_records';
         let history_db = null;
         let history_records_meta = [];
@@ -1820,44 +2223,15 @@
             const themeToggle = document.getElementById('themeToggle');
             const apiKey = document.getElementById('apiKey');
             const keyToggle = document.getElementById('keyToggle');
-            const baseUrl = document.getElementById('baseUrl');
-            const proxyUpstream = document.getElementById('proxyUpstream');
-            const apiEndpoint = document.getElementById('apiEndpoint');
+            const apiBaseUrl = document.getElementById('apiBaseUrl');
+            const customApiBaseUrl = document.getElementById('customApiBaseUrl');
+            const customApiBaseUrlInput = document.getElementById('customApiBaseUrlInput');
             const modelType = document.getElementById('modelType');
-            const imageModel = document.getElementById('imageModel');
-            const imageSizeCombo = document.getElementById('imageSizeCombo');
             const imageSize = document.getElementById('imageSize');
-            const imageSizeDropdownBtn = document.getElementById('imageSizeDropdownBtn');
-            const imageSizeDropdownMenu = document.getElementById('imageSizeDropdownMenu');
-            const imageSizeOptionButtons = Array.from(imageSizeDropdownMenu.querySelectorAll('.size-option'));
-            const PRESET_IMAGE_SIZES = imageSizeOptionButtons.map(option => option.dataset.size);
-            const PROXY_CHANNELS = [
-                { label: '渠道1', upstream: 'https://api.asxs.top' },
-                { label: '渠道2', upstream: 'https://sub2api.yuepa8.com' },
-                { label: '渠道3', upstream: 'https://chat.aiprox.net' },
-                { label: '渠道4', upstream: 'https://api.laogou.xyz' },
-                { label: '渠道5', upstream: 'https://aihub2api.cloud' },
-                { label: '渠道6', upstream: 'https://direct-api.ccccapi.cc' }
-            ];
-            const DEFAULT_PROXY_UPSTREAM = PROXY_CHANNELS[0]?.upstream || '';
-            const PROXY_UPSTREAM_LABELS = Object.fromEntries(
-                PROXY_CHANNELS.map(channel => [channel.upstream, channel.label])
-            );
-            proxyUpstream.innerHTML = PROXY_CHANNELS
-                .map(channel => `<option value="${escapeHtml(channel.upstream)}">${escapeHtml(channel.label)}</option>`)
-                .join('');
-            function getProxyUpstreamLabel(value) {
-                return PROXY_UPSTREAM_LABELS[value] || (value ? '未识别渠道' : '未选择');
-            }
-            const REFERENCE_IMAGE_JPEG_MIME = 'image/jpeg';
-            const REFERENCE_IMAGE_JPEG_QUALITY = 0.95;
-            const REFERENCE_IMAGE_MAX_BYTES = 500 * 1024;
-            const REFERENCE_IMAGE_MAX_PIXELS = 2560 * 1440;
-            let imageUploadQueue = Promise.resolve();
-            let pendingReferenceImageCount = 0;
-            let referenceImageBatchToken = 0;
-            let referenceImageSessionToken = 0;
-            let suppressImageSizeFocusOpen = false;
+            const aspectRatio = document.getElementById('aspectRatio');
+            const batchSize = document.getElementById('batchSize');
+            const seed = document.getElementById('seed');
+            const topP = document.getElementById('topP');
             const prompt = document.getElementById('prompt');
             const uploadArea = document.getElementById('uploadArea');
             const fileInput = document.getElementById('fileInput');
@@ -1870,6 +2244,8 @@
             const resultImage = document.getElementById('resultImage');
             const errorArea = document.getElementById('errorArea');
             const errorContent = document.getElementById('errorContent');
+            const resolutionTip = document.getElementById('resolutionTip');
+            const aspectRatioTip = document.getElementById('aspectRatioTip');
             const maxRetries = document.getElementById('maxRetries');
             const timeoutSeconds = document.getElementById('timeoutSeconds');
             const retryDelay = document.getElementById('retryDelay');
@@ -1888,6 +2264,20 @@
             const modalMask = document.getElementById('modalMask');
             const modalClose = document.getElementById('modalClose');
             const modalPreviewImage = document.getElementById('modalPreviewImage');
+            // ==================== 【新增】多模型支持DOM元素 ====================
+            const modelSelector = document.getElementById('modelSelector');
+            const basicParamsCard = document.getElementById('basicParamsCard');
+            const advancedParamsCard = document.getElementById('advancedParamsCard');
+            const aspectRatioGroup = document.getElementById('aspectRatioGroup');
+            const seedGroup = document.getElementById('seedGroup');
+            const topPGroup = document.getElementById('topPGroup');
+            const referenceImagesCard = document.getElementById('referenceImagesCard');
+            const maskImageCard = document.getElementById('maskImageCard');
+            const maskUploadArea = document.getElementById('maskUploadArea');
+            const maskFileInput = document.getElementById('maskFileInput');
+            const maskPreview = document.getElementById('maskPreview');
+            const maskPreviewImage = document.getElementById('maskPreviewImage');
+            const maskDeleteBtn = document.getElementById('maskDeleteBtn');
             // ==================== 【迁移新增】历史记录DOM元素获取 ====================
             const historyList = document.getElementById('historyList');
             const historyExpandBtn = document.getElementById('historyExpandBtn');
@@ -1923,36 +2313,45 @@
             let historyIsDragging = false;
             let historyStartX = 0;
             let historyStartY = 0;
-            // ==================== URL辅助 ====================
-            function resolveAbsoluteUrl(rawUrl, baseUrl = '') {
-                try {
-                    return new URL(rawUrl, baseUrl || window.location.href).toString();
-                } catch {
-                    return String(rawUrl || '').trim();
+            // ==================== 【核心适配】文档3 URL生成逻辑 - 100%匹配规范 ====================
+            function buildGenerateContentUrl(base_url, model_type) {
+                const base = base_url.trim().replace(/\/$/, "");
+                const model = model_type.trim();
+                
+                // 已包含生成接口后缀，直接返回
+                if (base.endsWith(":generateContent") || base.includes(":generate")) {
+                    return base;
                 }
+                // 已包含模型路径，直接拼接后缀
+                if (base.endsWith(`/${model}`)) {
+                    return `${base}:generateContent`;
+                }
+                if (base.includes("/models/")) {
+                    return `${base}:generateContent`;
+                }
+                // 标准Gemini接口拼接规则
+                return `${base}/v1beta/models/${model}:generateContent`;
+            }
+            // ==================== 【新增】GPT-image-2 URL生成逻辑 ====================
+            function buildGptImageUrl(base_url, endpoint) {
+                const base = base_url.trim().replace(/\/$/, "");
+                return `${base}/v1/images/${endpoint}`;
             }
             // ==================== 【修复：栈溢出问题 - 重写递归脱敏函数，增加循环引用检测+深度限制】 ====================
             function sanitizeDataForLog(data, isRequest = false) {
                 if (!data) return data;
+                let sanitized;
+                try {
+                    sanitized = JSON.parse(JSON.stringify(data));
+                } catch (e) {
+                    return data;
+                }
                 const seenObjects = new WeakSet();
                 const MAX_RECURSION_DEPTH = 20;
                 const BASE64_CHARSET_REGEX = /^[A-Za-z0-9+/=]+$/;
                 function recursiveSanitize(obj, currentDepth = 0) {
                     if (currentDepth > MAX_RECURSION_DEPTH) {
                         return '[OMITTED, MAX RECURSION DEPTH EXCEEDED]';
-                    }
-                    if (typeof obj === 'string') {
-                        const str = obj;
-                        if (str.length > 500 && BASE64_CHARSET_REGEX.test(str)) {
-                            return `[OMITTED, ${str.length} characters, BASE64 DATA]`;
-                        }
-                        if (str.length > 1000) {
-                            const dataUrlRegex = /^data:image\/[a-zA-Z]+;base64,/;
-                            if (dataUrlRegex.test(str.substring(0, 50))) {
-                                return `[OMITTED, ${str.length} characters, IMAGE BASE64 DATA]`;
-                            }
-                        }
-                        return str;
                     }
                     if (!obj || typeof obj !== 'object') return obj;
                     if (seenObjects.has(obj)) {
@@ -2006,14 +2405,70 @@
                     }
                     return sanitizedObj;
                 }
-                try {
-                    return recursiveSanitize(data);
-                } catch (error) {
-                    return '[OMITTED, LOG SANITIZE FAILED]';
+                sanitized = recursiveSanitize(sanitized);
+                return sanitized;
+            }
+            // ==================== 【新增功能】多模型切换核心逻辑 ====================
+            function updateEngineUI() {
+                const config = MODEL_DEFAULTS[currentEngine];
+                
+                // 更新模型名称
+                modelType.value = config.modelName;
+                
+                // 更新分辨率选项
+                imageSize.innerHTML = '';
+                config.imageSizes.forEach(size => {
+                    const option = document.createElement('option');
+                    option.value = size.value;
+                    option.textContent = size.label;
+                    if (size.selected) option.selected = true;
+                    imageSize.appendChild(option);
+                });
+                
+                // 显示/隐藏相关参数
+                aspectRatioGroup.style.display = config.showAspectRatio ? 'block' : 'none';
+                seedGroup.style.display = config.showSeed ? 'block' : 'none';
+                topPGroup.style.display = config.showTopP ? 'block' : 'none';
+                referenceImagesCard.style.display = config.showReferenceImages ? 'block' : 'none';
+                maskImageCard.style.display = config.showMask ? 'block' : 'none';
+                
+                // 更新最大图片数
+                currentMaxImages = config.maxImages;
+                maxImageCount.textContent = currentMaxImages;
+                updateImageCount();
+                
+                // 清空已上传的图片
+                uploadedImages = [];
+                renderImageList();
+                
+                // 清空蒙版
+                clearMaskImage();
+                
+                // 更新模型配置
+                updateModelConfig();
+                
+                consoleLog('info', `【引擎切换】已切换到 ${currentEngine} 引擎`);
+            }
+
+            // ==================== 新增：自定义尺寸切换逻辑 ====================
+            function handleCustomSizeToggle() {
+                const isCustomMode = imageSize.value === 'custom';
+                // 显示/隐藏自定义输入框
+                customSizeGroup.style.display = isCustomMode ? 'block' : 'none';
+                // 设置必填属性，配合表单验证
+                customSize.required = isCustomMode;
+                if (isCustomMode) {
+                    customSize.focus();
+                    consoleLog('info', '【参数修改】已切换到自定义尺寸模式');
                 }
             }
+            // 绑定事件
+            imageSize.addEventListener('change', handleCustomSizeToggle);
+
             // ==================== 【新增功能】提示词区域粘贴图片自动上传到参考图 ====================
             prompt.addEventListener('paste', (e) => {
+                if (!MODEL_DEFAULTS[currentEngine].showReferenceImages) return;
+                
                 const clipboardItems = e.clipboardData?.items;
                 if (!clipboardItems || clipboardItems.length === 0) return;
                 const imageFiles = [];
@@ -2162,6 +2617,87 @@
                     }
                 }
             });
+            // ==================== 【新增】蒙版图像上传逻辑 ====================
+            maskUploadArea.addEventListener('click', () => maskFileInput.click());
+            maskUploadArea.addEventListener('dragover', (e) => { 
+                e.preventDefault(); 
+                maskUploadArea.classList.add('dragover'); 
+            });
+            maskUploadArea.addEventListener('dragleave', () => maskUploadArea.classList.remove('dragover'));
+            maskUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                maskUploadArea.classList.remove('dragover');
+                handleMaskFile(e.dataTransfer.files[0]);
+                consoleLog('info', '【用户操作】拖拽上传蒙版图片');
+            });
+            maskFileInput.addEventListener('change', () => {
+                handleMaskFile(maskFileInput.files[0]);
+                consoleLog('info', '【用户操作】文件选择器上传蒙版图片');
+                maskFileInput.value = '';
+            });
+
+            maskDeleteBtn.addEventListener('click', clearMaskImage);
+            // 修复：蒙版图像点击预览事件
+            maskPreviewImage.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (maskPreviewImage.src && maskPreviewImage.src !== '') {
+                    openImagePreview(maskPreviewImage.src);
+                    consoleLog('info', '【用户操作】打开蒙版图像放大预览');
+                }
+            });
+
+            // 修复：删除按钮点击事件阻止冒泡
+            maskDeleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                clearMaskImage();
+            });
+
+            function handleMaskFile(file) {
+                if (!file) return;
+                if (file.type !== 'image/png') {
+                    const msg = `文件 ${file.name} 不是有效的PNG格式，蒙版仅支持PNG`;
+                    showError(msg);
+                    consoleLog('warning', msg);
+                    return;
+                }
+
+                showToast('正在加载蒙版图像...', 'info');
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Url = e.target.result;
+                    const [header, data] = base64Url.split(',');
+                    const mime_type = header.match(/data:(.*?);base64/)[1];
+
+                    // 创建临时图片对象确保加载完成
+                    const tempImg = new Image();
+                    tempImg.onload = () => {
+                        maskImage = {
+                            name: file.name,
+                            mime_type: mime_type,
+                            base64: data,
+                            url: base64Url
+                        };
+                        maskPreviewImage.src = base64Url;
+                        maskPreview.classList.add('show');
+                        showToast('蒙版图像加载完成', 'success');
+                        consoleLog('success', `蒙版图片 ${file.name} 加载完成，大小：${(file.size / 1024).toFixed(2)}KB，格式：${mime_type}`);
+                    };
+                    tempImg.onerror = () => {
+                        showToast('蒙版图像加载失败', 'error');
+                        consoleLog('error', `蒙版图片 ${file.name} 加载失败`);
+                    };
+                    tempImg.src = base64Url;
+                };
+                reader.readAsDataURL(file);
+            }
+            function clearMaskImage() {
+                maskImage = null;
+                maskPreviewImage.src = '';
+                maskPreview.classList.remove('show');
+                consoleLog('info', '【用户操作】已清除蒙版图片');
+            }
             // ==================== 【迁移新增】IndexedDB 历史记录管理 ====================
             function history_initDB() {
                 return new Promise((resolve, reject) => {
@@ -2226,14 +2762,20 @@
                         mime_type: img.mime_type,
                         base64: img.base64
                     }));
+                    const maskData = maskImage ? {
+                        name: maskImage.name,
+                        mime_type: maskImage.mime_type,
+                        base64: maskImage.base64
+                    } : null;
                     const record = {
                         id: Date.now().toString(),
                         timestamp: new Date().toISOString(),
-                        engine: 'asxs-api-responses-image-generate',
+                        engine: currentEngine,
                         imageBase64: imageBase64,
                         imageMimeType: imageMimeType,
                         thumbnail: await history_createThumbnail(imageBase64, imageMimeType),
                         referenceImages: referenceImages,
+                        maskImage: maskData,
                         params: params
                     };
                     const transaction = history_db.transaction([HISTORY_STORE_NAME], 'readwrite');
@@ -2395,7 +2937,7 @@
                     const item = document.createElement('div');
                     item.className = 'history-item';
                     item.dataset.id = record.id;
-                    const imageUrl = `data:image/png;base64,${record.thumbnail}`;
+                    const imageUrl = `data:image/jpeg;base64,${record.thumbnail}`;
                     const time = new Date(record.timestamp).toLocaleTimeString('zh-CN', {
                         month: 'numeric',
                         day: 'numeric',
@@ -2423,10 +2965,9 @@
                     const item = document.createElement('div');
                     item.className = 'history-grid-item';
                     item.dataset.id = record.id;
-                    const imageUrl = `data:image/png;base64,${record.thumbnail}`;
+                    const imageUrl = `data:image/jpeg;base64,${record.thumbnail}`;
                     const time = new Date(record.timestamp).toLocaleString('zh-CN');
-                    const promptText = record.params?.prompt || '';
-                    const shortPrompt = promptText.substring(0, 30) + (promptText.length > 30 ? '...' : '');
+                    const shortPrompt = record.params.prompt.substring(0, 30) + (record.params.prompt.length > 30 ? '...' : '');
                     item.innerHTML = `
                         <div class="history-grid-image-wrapper">
                             <img src="${imageUrl}" alt="历史图像" loading="lazy">
@@ -2434,7 +2975,7 @@
                         </div>
                         <div class="history-grid-item-info">
                             <div class="history-grid-item-time">${time}</div>
-                            <div class="history-grid-item-prompt">${escapeHtml(shortPrompt)}</div>
+                            <div class="history-grid-item-prompt">${shortPrompt}</div>
                         </div>
                     `;
                     item.querySelector('img').addEventListener('click', (e) => {
@@ -2464,15 +3005,10 @@
                     history_currentImageBlobUrl = URL.createObjectURL(history_currentImageBlob);
                     historyDetailImage.src = history_currentImageBlobUrl;
                     historyZoomContainer.style.display = 'flex';
-                    const params = record.params || {};
-                    const displayBaseUrl = params.baseUrl || '';
-                    const displayApiEndpoint = params.apiEndpoint || '';
-                    const displayImageSize = params.imageSize || '';
-                    const displayCallCore = getProxyUpstreamLabel(params.proxyUpstream || DEFAULT_PROXY_UPSTREAM);
                     historyDetailParams.innerHTML = `
                         <div class="history-detail-param-group">
-                            <div class="history-detail-param-label">调用核心</div>
-                            <div class="history-detail-param-value">${escapeHtml(displayCallCore)}</div>
+                            <div class="history-detail-param-label">生成引擎</div>
+                            <div class="history-detail-param-value">${record.engine}</div>
                         </div>
                         <div class="history-detail-param-group">
                             <div class="history-detail-param-label">生成时间</div>
@@ -2480,47 +3016,79 @@
                         </div>
                         <div class="history-detail-param-group">
                             <div class="history-detail-param-label">API Key</div>
-                            <div class="history-detail-param-value">${params.apiKey ? '已保存' : '未保存'}</div>
+                            <div class="history-detail-param-value">${record.params.apiKey ? '已保存' : '未保存'}</div>
                         </div>
                         <div class="history-detail-param-group">
-                            <div class="history-detail-param-label">Base URL</div>
-                            <div class="history-detail-param-value">${escapeHtml(displayBaseUrl)}</div>
+                            <div class="history-detail-param-label">API基础地址</div>
+                            <div class="history-detail-param-value">${record.params.apiBaseUrl}</div>
                         </div>
                         <div class="history-detail-param-group">
-                            <div class="history-detail-param-label">API端点</div>
-                            <div class="history-detail-param-value">${escapeHtml(displayApiEndpoint)}</div>
+                            <div class="history-detail-param-label">自定义API地址</div>
+                            <div class="history-detail-param-value">${record.params.customApiBaseUrl || '无'}</div>
                         </div>
                         <div class="history-detail-param-group">
-                            <div class="history-detail-param-label">模型名称 (model)</div>
-                            <div class="history-detail-param-value">${escapeHtml(params.modelType || '')}</div>
+                            <div class="history-detail-param-label">模型名称</div>
+                            <div class="history-detail-param-value">${record.params.modelType}</div>
                         </div>
+                        
                         <div class="history-detail-param-group">
-                            <div class="history-detail-param-label">image-model</div>
-                            <div class="history-detail-param-value">${escapeHtml(params.imageModel || '')}</div>
+                            <div class="history-detail-param-label">分辨率</div>
+                            <div class="history-detail-param-value">${record.params.imageSize}${record.params.finalSize && record.params.imageSize === 'custom' ? ` (实际生成: ${record.params.finalSize})` : ''}</div>
                         </div>
+                        ${record.params.customSizeValue ? `
                         <div class="history-detail-param-group">
-                            <div class="history-detail-param-label">图像尺寸</div>
-                            <div class="history-detail-param-value">${escapeHtml(displayImageSize)}</div>
+                            <div class="history-detail-param-label">自定义尺寸输入</div>
+                            <div class="history-detail-param-value">${record.params.customSizeValue}</div>
                         </div>
+                        ` : ''}
+
+                        ${record.params.aspectRatio ? `
+                        <div class="history-detail-param-group">
+                            <div class="history-detail-param-label">宽高比</div>
+                            <div class="history-detail-param-value">${record.params.aspectRatio}</div>
+                        </div>
+                        ` : ''}
+                        <div class="history-detail-param-group">
+                            <div class="history-detail-param-label">批次大小</div>
+                            <div class="history-detail-param-value">${record.params.batchSize}</div>
+                        </div>
+                        ${record.params.seed ? `
+                        <div class="history-detail-param-group">
+                            <div class="history-detail-param-label">随机种子</div>
+                            <div class="history-detail-param-value">${record.params.seed}</div>
+                        </div>
+                        ` : ''}
+                        ${record.params.topP ? `
+                        <div class="history-detail-param-group">
+                            <div class="history-detail-param-label">核采样 top_p</div>
+                            <div class="history-detail-param-value">${record.params.topP}</div>
+                        </div>
+                        ` : ''}
                         <div class="history-detail-param-group">
                             <div class="history-detail-param-label">提示词</div>
-                            <div class="history-detail-param-value">${escapeHtml(params.prompt || '')}</div>
+                            <div class="history-detail-param-value">${record.params.prompt}</div>
                         </div>
                         <div class="history-detail-param-group">
                             <div class="history-detail-param-label">参考图数量</div>
                             <div class="history-detail-param-value">${record.referenceImages ? record.referenceImages.length : 0} 张</div>
                         </div>
+                        ${record.maskImage ? `
+                        <div class="history-detail-param-group">
+                            <div class="history-detail-param-label">是否包含蒙版</div>
+                            <div class="history-detail-param-value">是</div>
+                        </div>
+                        ` : ''}
                         <div class="history-detail-param-group">
                             <div class="history-detail-param-label">最大重试次数</div>
-                            <div class="history-detail-param-value">${escapeHtml(params.maxRetries || '')}</div>
+                            <div class="history-detail-param-value">${record.params.maxRetries}</div>
                         </div>
                         <div class="history-detail-param-group">
                             <div class="history-detail-param-label">超时时间（秒）</div>
-                            <div class="history-detail-param-value">${escapeHtml(params.timeoutSeconds || '')}</div>
+                            <div class="history-detail-param-value">${record.params.timeoutSeconds}</div>
                         </div>
                         <div class="history-detail-param-group">
                             <div class="history-detail-param-label">重试间隔（毫秒）</div>
-                            <div class="history-detail-param-value">${escapeHtml(params.retryDelay || '')}</div>
+                            <div class="history-detail-param-value">${record.params.retryDelay}</div>
                         </div>
                     `;
                     historyDetailModal.style.display = 'flex';
@@ -2551,45 +3119,109 @@
                 if (!history_currentRecordId) return;
                 try {
                     const record = await history_getFullRecord(history_currentRecordId);
-                    const params = record.params || {};
-                    // 1. 加载基础参数
-                    if (params.apiKey) apiKey.value = params.apiKey;
-                    baseUrl.value = params.baseUrl || 'http://localhost:8792/v1';
-                    proxyUpstream.value = params.proxyUpstream || DEFAULT_PROXY_UPSTREAM;
-                    apiEndpoint.value = params.apiEndpoint || '/responses';
-                    const savedImageSize = params.imageSize || '1024x1792';
-                    ensureSelectOption(modelType, params.modelType);
-                    imageModel.value = params.imageModel || 'gpt-image-2';
-                    ensureSelectOption(imageSize, savedImageSize);
-                    syncImageSizeOptionState();
-                    prompt.value = params.prompt || '';
-                    maxRetries.value = params.maxRetries || '3';
-                    timeoutSeconds.value = params.timeoutSeconds || '60';
-                    retryDelay.value = params.retryDelay || '2000';
+                    const params = record.params;
                     
-                    // 2. 加载参考图（使用record中完整数据）
-                    referenceImageSessionToken += 1;
-                    pendingReferenceImageCount = 0;
+                    // 1. 先切换到对应的引擎
+                    currentEngine = record.engine;
+                    modelSelector.value = currentEngine;
+                    updateEngineUI();
+                    
+                    // 2. 等待UI更新完成
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    
+                    // 3. 加载基础参数
+                    if (params.apiKey) apiKey.value = params.apiKey;
+                    apiBaseUrl.value = params.apiBaseUrl;
+                    const isCustom = params.apiBaseUrl === 'custom';
+                    customApiBaseUrl.classList.toggle('show', isCustom);
+                    if (isCustom && params.customApiBaseUrl) {
+                        customApiBaseUrlInput.value = params.customApiBaseUrl;
+                    }
+                    modelType.value = params.modelType;
+                    imageSize.value = params.imageSize;
+                    
+                    // 4. 加载引擎特定参数
+                    if (currentEngine === 'gemini') {
+                        if (params.aspectRatio) aspectRatio.value = params.aspectRatio;
+                        seed.value = params.seed || '';
+                        topP.value = params.topP || '0.95';
+                    } else {
+                        // 新增：处理保存的尺寸是否为预设选项
+                        const config = MODEL_DEFAULTS[currentEngine];
+                        const isPresetSize = config.imageSizes.some(size => size.value === params.imageSize);
+                        if (params.imageSize === 'custom') {
+                            // 特殊处理：新版自定义尺寸模式
+                            imageSize.value = 'custom';
+                            // 修复：优先使用customSizeValue，如果为空则尝试使用其他可能的字段
+                            let customSizeValue = params.customSizeValue || '';
+                            // 兼容处理：如果customSizeValue为空，尝试从其他地方获取
+                            if (!customSizeValue) {
+                                // 检查是否有保存的实际生成尺寸
+                                if (params.finalSize) {
+                                    customSizeValue = params.finalSize;
+                                }
+                                // 检查是否有旧版格式的尺寸（直接保存在size字段）
+                                else if (params.imageSize && params.imageSize !== 'custom') {
+                                    customSizeValue = params.imageSize;
+                                }
+                            }
+                            customSize.value = customSizeValue;
+                            customSizeGroup.style.display = 'block';
+                            customSize.required = true;
+                            // 触发自定义尺寸切换事件
+                            handleCustomSizeToggle();
+                            consoleLog('info', `【历史记录】加载自定义尺寸：${customSizeValue}`);
+                        } else if (isPresetSize) {
+                            // 预设尺寸，直接选择
+                            imageSize.value = params.imageSize;
+                            customSizeGroup.style.display = 'none';
+                            customSize.required = false;
+                        } else {
+                            // 兼容旧版历史记录（直接保存了实际尺寸值）
+                            imageSize.value = 'custom';
+                            customSize.value = params.imageSize;
+                            customSizeGroup.style.display = 'block';
+                            customSize.required = true;
+                            // 触发自定义尺寸切换事件
+                            handleCustomSizeToggle();
+                            consoleLog('info', `【历史记录】兼容旧版记录，加载自定义尺寸：${params.imageSize}`);
+                        }
+                    }
+                    
+                    batchSize.value = params.batchSize;
+                    prompt.value = params.prompt;
+                    maxRetries.value = params.maxRetries;
+                    timeoutSeconds.value = params.timeoutSeconds;
+                    retryDelay.value = params.retryDelay;
+                    
+                    // 5. 加载参考图（使用record中完整数据）
                     uploadedImages = [];
                     if (record.referenceImages && record.referenceImages.length > 0) {
-                        record.referenceImages.forEach(img => {
-                            uploadedImages.push({
-                                name: img.name,
-                                mime_type: img.mime_type,
-                                base64: img.base64,
-                                url: `data:${img.mime_type};base64,${img.base64}`
-                            });
-                        });
+                        uploadedImages = (await normalizeStoredReferenceImagesToJpeg(record.referenceImages)).slice(0, currentMaxImages);
                     }
                     renderImageList();
                     updateImageCount();
-                    // 3. 更新模型配置
+                    
+                    // 6. 加载蒙版（使用record中完整数据）
+                    clearMaskImage();
+                    if (record.maskImage) {
+                        maskImage = {
+                            name: record.maskImage.name,
+                            mime_type: record.maskImage.mime_type,
+                            base64: record.maskImage.base64,
+                            url: `data:${record.maskImage.mime_type};base64,${record.maskImage.base64}`
+                        };
+                        maskPreviewImage.src = maskImage.url;
+                        maskPreview.classList.add('show');
+                    }
+                    
+                    // 7. 更新模型配置
                     updateModelConfig();
                     
-                    // 4. 关闭窗口并提示
+                    // 8. 关闭窗口并提示
                     history_closeDetailModal();
-                    showToast('参数和参考图已完整加载到编辑区', 'success');
-                    consoleLog('success', '【历史记录】参数和参考图已完整加载到编辑区');
+                    showToast('参数、参考图和蒙版已完整加载到编辑区', 'success');
+                    consoleLog('success', '【历史记录】参数、参考图和蒙版已完整加载到编辑区');
                 } catch (error) {
                     consoleLog('error', '【历史记录】加载参数失败', error);
                     showToast('加载参数失败：' + error.message, 'error');
@@ -2599,7 +3231,7 @@
                 if (!history_currentImageBlobUrl) return;
                 const link = document.createElement('a');
                 link.href = history_currentImageBlobUrl;
-                link.download = `asxs-api-history-${history_currentRecordId}.png`;
+                link.download = `gemini-history-${history_currentRecordId}.png`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -2688,89 +3320,10 @@
                 consoleLog('info', 'Base64清洗完成，最终长度：' + cleaned.length);
                 return cleaned;
             }
-            // ==================== ASXS API Responses 非流式请求处理函数 ====================
-            async function requestResponsesApi(requestUrl, body, timeoutMs, logLabel) {
-                const controller = new AbortController();
-                abortController = controller;
-                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-                try {
-                    consoleLog('info', `${logLabel}：发起 Responses 非流式 POST 请求`);
-                    consoleLog('info', `${logLabel}：请求URL`, requestUrl);
-
-                    const apiKeyValue = apiKey.value.trim();
-                    const requestHeaders = {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${apiKeyValue}`,
-                        "X-ASXS-Upstream": proxyUpstream.value
-                    };
-
-                    consoleLog('info', '请求头', {
-                        ...requestHeaders,
-                        "Authorization": "[OMITTED, API KEY HIDDEN]",
-                        "X-ASXS-Upstream": getProxyUpstreamLabel(requestHeaders["X-ASXS-Upstream"])
-                    });
-                    consoleLog('info', '请求体', body, true);
-
-                    const response = await fetch(requestUrl, {
-                        method: 'POST',
-                        headers: requestHeaders,
-                        body: JSON.stringify(body),
-                        signal: controller.signal
-                    });
-
-                    consoleLog(response.ok ? 'success' : 'error', `${logLabel}：收到响应，状态码：${response.status} ${response.statusText}`);
-
-                    const responseHeaders = {};
-                    response.headers.forEach((value, key) => {
-                        responseHeaders[key] = value;
-                    });
-                    consoleLog('info', '响应头', responseHeaders);
-
-                    const responseText = await response.text();
-                    let responseData = null;
-                    if (responseText) {
-                        try {
-                            responseData = JSON.parse(responseText);
-                        } catch (parseError) {
-                            if (response.ok) {
-                                consoleLog('error', `${logLabel}：响应不是有效JSON`, responseText);
-                                throw new Error(`接口响应不是有效JSON\n请求地址：${requestUrl}\n响应内容：\n${responseText}`);
-                            }
-                        }
-                    }
-
-                    if (!response.ok) {
-                        consoleLog('error', `${logLabel}：请求失败，错误详情`, responseData || responseText || '无错误响应内容');
-                        throw {
-                            status: response.status,
-                            detail: responseText || JSON.stringify(responseData || {}, null, 2),
-                            message: `HTTP ${response.status} ${response.statusText}\n错误详情：\n${responseText || JSON.stringify(responseData || {}, null, 2)}`
-                        };
-                    }
-
-                    if (!responseData) {
-                        throw new Error(`接口响应为空或无法解析\n请求地址：${requestUrl}`);
-                    }
-
-                    consoleLog('info', '响应体', responseData);
-                    return await extractImageDataFromResponse(responseData, requestUrl);
-                } catch (error) {
-                    if (error.name === 'AbortError') {
-                        consoleLog('error', `${logLabel}：请求超时（超过 ${timeoutMs/1000} 秒）`);
-                        throw { isTimeout: true, message: `${logLabel}请求超时（超过 ${timeoutMs/1000} 秒）` };
-                    }
-                    consoleLog('error', `${logLabel}：Responses 请求发生异常`, error);
-                    throw error;
-                } finally {
-                    clearTimeout(timeoutId);
-                }
-            }
             const IMAGE_BASE64_FIELD_SET = new Set([
                 'b64json', 'b64', 'base64', 'imagebase64', 'imageb64',
                 'imagedata', 'inlinedata', 'image', 'img', 'data', 'content',
-                'filedata', 'binary', 'bytes', 'outputimage', 'imagecontent',
-                'result', 'output'
+                'filedata', 'binary', 'bytes', 'outputimage', 'imagecontent'
             ]);
             const IMAGE_URL_FIELD_SET = new Set([
                 'url', 'imageurl', 'downloadurl', 'link', 'href', 'uri', 'src',
@@ -2792,8 +3345,6 @@
                 img: 9,
                 data: 10,
                 content: 11,
-                result: 12,
-                output: 13,
                 url: 20,
                 imageurl: 21,
                 downloadurl: 22,
@@ -2823,7 +3374,38 @@
             function isLikelyImageUrl(rawValue) {
                 if (typeof rawValue !== 'string') return false;
                 const value = rawValue.trim();
-                return /^https?:\/\/\S+/i.test(value) || /^\/\S+/.test(value);
+                if (!/^https?:\/\/\S+/i.test(value)) return false;
+                return true;
+            }
+            function extractImageUrlsFromText(rawValue) {
+                if (typeof rawValue !== 'string') return [];
+                const text = rawValue.trim();
+                if (!text) return [];
+                const urls = [];
+                const seen = new Set();
+                const addUrl = (url) => {
+                    if (!isLikelyImageUrl(url)) return;
+                    const normalizedUrl = url.trim().replace(/[),.;!?，。；！？]+$/g, '');
+                    const cleanPath = normalizedUrl.split('?')[0].split('#')[0].toLowerCase();
+                    if (!/\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(cleanPath)) return;
+                    if (seen.has(normalizedUrl)) return;
+                    seen.add(normalizedUrl);
+                    urls.push(normalizedUrl);
+                };
+                const markdownImageRegex = /!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/gi;
+                let match;
+                while ((match = markdownImageRegex.exec(text)) !== null) {
+                    addUrl(match[1]);
+                }
+                const markdownLinkRegex = /\[[^\]]+]\((https?:\/\/[^)\s]+)\)/gi;
+                while ((match = markdownLinkRegex.exec(text)) !== null) {
+                    addUrl(match[1]);
+                }
+                const bareUrlRegex = /https?:\/\/[^\s"'<>]+/gi;
+                while ((match = bareUrlRegex.exec(text)) !== null) {
+                    addUrl(match[0]);
+                }
+                return urls;
             }
             function isLikelyBase64String(rawValue) {
                 if (typeof rawValue !== 'string') return false;
@@ -2887,21 +3469,97 @@
                     reader.readAsDataURL(blob);
                 });
             }
-            async function downloadImageUrlToBase64(imageUrl, requestUrl) {
-                const resolvedImageUrl = new URL(imageUrl, requestUrl).toString();
-                consoleLog('info', `开始下载图像URL：${resolvedImageUrl}`);
-                const response = await fetch(resolvedImageUrl, { signal: AbortSignal.timeout(100000) });
-                if (!response.ok) {
-                    throw new Error(`图像下载失败：HTTP ${response.status} ${response.statusText}`);
+            function createAbortError(message) {
+                const error = new Error(message);
+                error.name = 'AbortError';
+                error.isUserAbort = true;
+                return error;
+            }
+            function throwIfSignalAborted(signal) {
+                if (signal && signal.aborted) {
+                    throw createAbortError('用户已中止URL图像下载');
                 }
-                const blob = await response.blob();
-                const imageBase64 = await blobToBase64Data(blob);
-                const imageMimeType = normalizeImageMimeType(
-                    blob.type,
-                    inferImageMimeTypeFromUrl(resolvedImageUrl)
-                );
-                consoleLog('success', `图像下载并转换完成，大小：${(blob.size / 1024).toFixed(2)}KB，格式：${imageMimeType}`);
-                return { imageBase64, imageMimeType };
+            }
+            function delayWithAbort(ms, signal) {
+                if (!signal) return delay(ms);
+                return new Promise((resolve, reject) => {
+                    if (signal.aborted) {
+                        reject(createAbortError('用户已中止URL图像下载'));
+                        return;
+                    }
+                    const timer = setTimeout(() => {
+                        signal.removeEventListener('abort', onAbort);
+                        resolve();
+                    }, ms);
+                    function onAbort() {
+                        clearTimeout(timer);
+                        reject(createAbortError('用户已中止URL图像下载'));
+                    }
+                    signal.addEventListener('abort', onAbort, { once: true });
+                });
+            }
+            function isUserAbortError(error, signal) {
+                return !!(signal && signal.aborted) || !!(error && error.isUserAbort);
+            }
+            function isRetryableImageDownloadError(error) {
+                if (!error) return false;
+                if (error.status) {
+                    return error.status === 408 || error.status === 429 || error.status >= 500;
+                }
+                return error.name === 'TypeError' || error.name === 'NetworkError';
+            }
+            async function downloadImageUrlToBase64(imageUrl, options = {}) {
+                const candidatePath = options.path || 'URL字段';
+                const retryCount = Number.isFinite(options.maxRetries) ? Math.max(0, options.maxRetries) : Math.max(0, parseInt(maxRetries.value, 10) || 0);
+                const retryWaitMs = Number.isFinite(options.retryDelayMs) ? Math.max(0, options.retryDelayMs) : Math.max(0, parseInt(retryDelay.value, 10) || 2000);
+                const signal = options.signal || (abortController ? abortController.signal : undefined);
+                let lastError = null;
+
+                consoleLog('info', `检测到URL图像字段（路径：${candidatePath}），下载超时：无限长，开始下载：${imageUrl}`);
+                for (let attempt = 0; attempt <= retryCount; attempt++) {
+                    if (attempt > 0) {
+                        consoleLog('warning', `URL图像下载重试（第 ${attempt + 1}/${retryCount + 1} 次），等待 ${retryWaitMs}ms：${candidatePath}`);
+                        await delayWithAbort(retryWaitMs, signal);
+                    }
+
+                    try {
+                        throwIfSignalAborted(signal);
+                        consoleLog('info', `URL图像下载尝试（第 ${attempt + 1}/${retryCount + 1} 次）：${candidatePath}`);
+                        const response = await fetch(imageUrl, signal ? { signal } : {});
+                        if (!response.ok) {
+                            const httpError = new Error(`URL图像下载HTTP ${response.status} ${response.statusText}`);
+                            httpError.status = response.status;
+                            throw httpError;
+                        }
+                        const blob = await response.blob();
+                        if (!blob || !blob.size) {
+                            throw new Error('URL图像下载结果为空');
+                        }
+                        const imageBase64 = await blobToBase64Data(blob);
+                        const imageMimeType = normalizeImageMimeType(
+                            blob.type,
+                            inferImageMimeTypeFromUrl(imageUrl)
+                        );
+                        consoleLog('success', `URL图像下载并转换完成，大小：${(blob.size / 1024).toFixed(2)}KB，格式：${imageMimeType}`);
+                        return { imageBase64, imageMimeType };
+                    } catch (error) {
+                        lastError = error;
+                        if (isUserAbortError(error, signal)) {
+                            consoleLog('warning', `URL图像下载已被用户中止：${candidatePath}`, error);
+                            throw error;
+                        }
+
+                        const shouldRetry = attempt < retryCount && isRetryableImageDownloadError(error);
+                        if (!shouldRetry) {
+                            const reason = attempt < retryCount ? '错误不可重试' : '已达最大重试次数';
+                            consoleLog('warning', `URL图像下载失败（${reason}）：${candidatePath}`, error);
+                            throw error;
+                        }
+                        consoleLog('warning', `URL图像下载失败，准备重试：${candidatePath}`, error);
+                    }
+                }
+
+                throw lastError || new Error('URL图像下载失败');
             }
             function collectImageCandidatesFromResponse(root) {
                 const candidates = [];
@@ -2950,6 +3608,10 @@
                         if (isLikelyBase64String(node) && parentKeyNormalized.includes('image')) {
                             addCandidate('base64', node, inheritedMime, path, parentKeyNormalized, 40);
                         }
+                        const textImageUrls = extractImageUrlsFromText(node);
+                        textImageUrls.forEach((imageUrl, index) => {
+                            addCandidate('url', imageUrl, inferImageMimeTypeFromUrl(imageUrl), `${path}.textImageUrl[${index}]`, parentKeyNormalized || 'text', 80 + index);
+                        });
                         return;
                     }
                     if (Array.isArray(node)) {
@@ -2987,6 +3649,13 @@
                                 addCandidate('url', value, inferImageMimeTypeFromUrl(value), currentPath, keyNormalized, 30);
                                 return;
                             }
+                            const textImageUrls = extractImageUrlsFromText(value);
+                            if (textImageUrls.length) {
+                                textImageUrls.forEach((imageUrl, index) => {
+                                    addCandidate('url', imageUrl, inferImageMimeTypeFromUrl(imageUrl), `${currentPath}.textImageUrl[${index}]`, keyNormalized || 'text', 80 + index);
+                                });
+                                return;
+                            }
                         }
                         if (value && typeof value === 'object') {
                             walk(value, currentPath, keyNormalized, localMime, depth + 1);
@@ -3018,16 +3687,28 @@
                             };
                         }
                         if (candidate.type === 'url') {
-                            const urlImage = await downloadImageUrlToBase64(candidate.value, requestUrl);
+                            const urlImage = await downloadImageUrlToBase64(candidate.value, {
+                                path: candidate.path,
+                                signal: abortController ? abortController.signal : undefined,
+                                maxRetries: parseInt(maxRetries.value, 10) || 0,
+                                retryDelayMs: parseInt(retryDelay.value, 10) || 2000
+                            });
                             consoleLog('success', `图像提取成功：URL（路径：${candidate.path}）`);
                             return urlImage;
                         }
                     } catch (candidateError) {
+                        if (candidateError && candidateError.name === 'AbortError' && abortController && abortController.signal.aborted) {
+                            throw candidateError;
+                        }
                         failedCandidates.push(`${candidate.path}(${candidate.type})`);
-                        consoleLog('warning', `候选字段解析失败，继续尝试：${candidate.path}`, candidateError);
+                        if (candidate.type === 'url') {
+                            consoleLog('warning', `URL图像字段下载失败，继续尝试其他候选字段：${candidate.path}`, candidateError);
+                        } else {
+                            consoleLog('warning', `候选字段解析失败，继续尝试：${candidate.path}`, candidateError);
+                        }
                     }
                 }
-                throw new Error(`接口返回了图像候选字段，但全部解析失败\n请求地址：${requestUrl}\n失败字段：${failedCandidates.slice(0, 10).join('，')}`);
+                throw new Error(`接口返回了图像候选字段，但全部解析/下载失败\n请求地址：${requestUrl}\n失败字段：${failedCandidates.slice(0, 10).join('，')}`);
             }
             function extractImageData(part) {
                 if (!part || typeof part !== 'object') return null;
@@ -3066,12 +3747,10 @@
                     <span class="${levelClass}">${levelText}</span>
                     <span class="console-message">${escapeHtml(message)}</span>
                 `;
-                let nativeData = '';
                 if (data) {
                     const dataLine = document.createElement('div');
                     dataLine.className = 'console-line';
                     const sanitizedData = sanitizeDataForLog(data, isRequestData);
-                    nativeData = data instanceof Error ? data : sanitizedData;
                     let dataStr;
                     if (data instanceof Error) {
                         dataStr = `错误名称：${data.name}\n错误信息：${data.message}\n错误堆栈：\n${data.stack || '无堆栈信息'}`;
@@ -3092,95 +3771,24 @@
                     'error': console.error
                 };
                 const nativeLog = nativeLogMap[level] || console.log;
-                nativeLog(`[${timeStr}] [${levelText}] ${message}`, nativeData);
+                nativeLog(`[${timeStr}] [${levelText}] ${message}`, data || '');
             }
             function escapeHtml(str) {
                 const div = document.createElement('div');
                 div.textContent = str;
                 return div.innerHTML;
             }
-            function ensureSelectOption(selectElement, value, label = value) {
-                if (!value) return;
-                if (selectElement.tagName !== 'SELECT') {
-                    selectElement.value = value;
-                    return;
-                }
-                const hasOption = Array.from(selectElement.options).some(option => option.value === value);
-                if (!hasOption) {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = label;
-                    selectElement.appendChild(option);
-                }
-                selectElement.value = value;
-            }
-            function normalizeSizeText(rawValue) {
-                return String(rawValue || '').trim().toLowerCase().replace(/[×*]/g, 'x').replace(/\s+/g, '');
-            }
-            function roundToMultipleOf16(value) {
-                return Math.max(16, Math.round(value / 16) * 16);
-            }
-            function normalizeImageSizeForRequest(rawValue, shouldLog = true) {
-                const normalizedText = normalizeSizeText(rawValue);
-                if (!normalizedText) {
-                    throw new Error('请输入图像尺寸');
-                }
-                if (normalizedText === 'auto') {
-                    return 'auto';
-                }
-                const presetSize = PRESET_IMAGE_SIZES.find(size => size.toLowerCase() === normalizedText);
-                if (presetSize) {
-                    return presetSize;
-                }
-                const match = normalizedText.match(/^(\d+)x(\d+)$/);
-                if (!match) {
-                    throw new Error('图像尺寸格式应为“宽x高”或“auto”，例如 1024x1024');
-                }
-                const width = Number(match[1]);
-                const height = Number(match[2]);
-                if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width <= 0 || height <= 0) {
-                    throw new Error('图像尺寸的宽和高必须是大于 0 的整数');
-                }
-                const requestSize = `${roundToMultipleOf16(width)}x${roundToMultipleOf16(height)}`;
-                if (shouldLog && requestSize !== normalizedText) {
-                    consoleLog('info', `自定义图像尺寸已转换为16的倍数：${normalizedText} → ${requestSize}`);
-                }
-                return requestSize;
-            }
-            function setImageSizeDropdownOpen(isOpen) {
-                imageSizeDropdownMenu.classList.toggle('open', isOpen);
-                imageSizeDropdownBtn.setAttribute('aria-expanded', String(isOpen));
-                imageSize.setAttribute('aria-expanded', String(isOpen));
-                if (isOpen) {
-                    syncImageSizeOptionState();
-                }
-            }
-            function syncImageSizeOptionState() {
-                const currentSize = normalizeSizeText(imageSize.value);
-                imageSizeOptionButtons.forEach(option => {
-                    const isActive = normalizeSizeText(option.dataset.size) === currentSize;
-                    option.classList.toggle('active', isActive);
-                    option.setAttribute('aria-selected', String(isActive));
-                });
-            }
-            function focusImageSizeWithoutOpening() {
-                suppressImageSizeFocusOpen = true;
-                imageSize.focus();
-                window.setTimeout(() => {
-                    suppressImageSizeFocusOpen = false;
-                }, 0);
-            }
             // ==================== 交互逻辑 - 所有功能事件绑定 ====================
-            // Base URL 输入监听
-            baseUrl.addEventListener('input', () => {
-                consoleLog('info', `【参数修改】Base URL已更新为：${baseUrl.value.trim() || '空'}`);
+            // 多模型切换
+            modelSelector.addEventListener('change', () => {
+                currentEngine = modelSelector.value;
+                updateEngineUI();
             });
-            proxyUpstream.addEventListener('change', () => {
-                consoleLog('info', `【参数修改】Proxy Upstream已更新为：${getProxyUpstreamLabel(proxyUpstream.value)}`);
-            });
-            // API端点 输入监听
-            apiEndpoint.addEventListener('input', () => {
-                consoleLog('info', `【参数修改】API端点已更新为：${apiEndpoint.value.trim() || '空'}`);
+            // API基础地址联动逻辑
+            apiBaseUrl.addEventListener('change', () => {
+                const isCustom = apiBaseUrl.value === 'custom';
+                customApiBaseUrl.classList.toggle('show', isCustom);
+                consoleLog('info', `【参数修改】API基础地址已切换为：${isCustom ? '自定义模式' : apiBaseUrl.value}`);
             });
             // 清空控制台
             consoleClear.addEventListener('click', () => {
@@ -3210,93 +3818,84 @@
             modelType.addEventListener('input', updateModelConfig);
             modelType.addEventListener('change', updateModelConfig);
             function updateModelConfig() {
+                if (currentEngine !== 'gemini') return;
+                
                 currentModel = modelType.value.trim();
-                currentMaxImages = 14;
+                const modelValueLower = currentModel.toLowerCase();
+                // 模型类型识别
+                if (modelValueLower.includes('flash')) {
+                    currentModelType = 'flash';
+                    currentMaxImages = 15;
+                    resolutionTip.textContent = 'Flash系列支持：512/1K/2K/4K 全分辨率';
+                } else if (modelValueLower.includes('pro')) {
+                    currentModelType = 'pro';
+                    currentMaxImages = 15;
+                    resolutionTip.textContent = 'Pro系列支持：1K/2K/4K 分辨率';
+                    if (imageSize.value === '512') {
+                        imageSize.value = '1K';
+                        resolutionTip.textContent += ' | 已自动切换为1K（Pro系列不支持512分辨率）';
+                    }
+                } else {
+                    currentModelType = 'custom';
+                    currentMaxImages = 15;
+                    resolutionTip.textContent = '自定义模型，请自行确认支持的分辨率与参数限制';
+                }
+                // 更新最大图片数
                 maxImageCount.textContent = currentMaxImages;
                 updateImageCount();
                 if (uploadedImages.length > currentMaxImages) {
-                    referenceImageSessionToken += 1;
-                    pendingReferenceImageCount = 0;
                     uploadedImages = uploadedImages.slice(0, currentMaxImages);
                     renderImageList();
                 }
-                consoleLog('info', `【参数修改】模型已更新为：${currentModel}`);
+                aspectRatio.dispatchEvent(new Event('change'));
+                // 日志输出API地址
+                const finalBaseUrl = apiBaseUrl.value === 'custom' ? customApiBaseUrlInput.value.trim() : apiBaseUrl.value;
+                const finalUrl = buildGenerateContentUrl(finalBaseUrl, currentModel);
+                consoleLog('info', `【参数修改】模型已更新，自动拼接API地址：${finalUrl}`);
             }
-            imageModel.addEventListener('input', () => {
-                consoleLog('info', `【参数修改】image-model已更新为：${imageModel.value.trim() || '空'}`);
-            });
-            // 图像尺寸提示
-            imageSize.addEventListener('focus', () => {
-                if (suppressImageSizeFocusOpen) {
-                    suppressImageSizeFocusOpen = false;
-                    return;
-                }
-                setImageSizeDropdownOpen(true);
-            });
-            imageSize.addEventListener('click', () => {
-                setImageSizeDropdownOpen(true);
-            });
-            imageSize.addEventListener('input', () => {
-                consoleLog('info', `【参数修改】图像尺寸已修改为：${imageSize.value.trim() || '空'}`);
-                syncImageSizeOptionState();
-                setImageSizeDropdownOpen(true);
-            });
-            imageSize.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    setImageSizeDropdownOpen(false);
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    setImageSizeDropdownOpen(true);
-                    const activeOption = imageSizeDropdownMenu.querySelector('.size-option.active') || imageSizeOptionButtons[0];
-                    if (activeOption) activeOption.focus();
-                }
-            });
-            imageSizeDropdownBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const shouldOpen = !imageSizeDropdownMenu.classList.contains('open');
-                setImageSizeDropdownOpen(shouldOpen);
-                if (!shouldOpen) {
-                    focusImageSizeWithoutOpening();
+            // 宽高比提示
+            aspectRatio.addEventListener('change', () => {
+                if (currentEngine !== 'gemini') return;
+                
+                const value = aspectRatio.value;
+                const flashOnlyRatios = ['8:1', '4:1', '1:4', '1:8'];
+                if (flashOnlyRatios.includes(value) && currentModelType !== 'flash') {
+                    aspectRatioTip.textContent = currentModelType === 'pro' 
+                        ? '⚠️ 当前Pro系列模型不支持此宽高比，生成可能会失败' 
+                        : '⚠️ 当前自定义模型可能不支持此宽高比，请自行确认兼容性';
+                    aspectRatioTip.className = 'label-tip warning';
                 } else {
-                    imageSize.focus();
+                    aspectRatioTip.textContent = '';
+                    aspectRatioTip.className = 'label-tip';
                 }
+                consoleLog('info', `【参数修改】宽高比已修改为：${value}`);
             });
-            imageSizeOptionButtons.forEach((option, index) => {
-                option.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                });
-                option.addEventListener('click', () => {
-                    imageSize.value = option.dataset.size;
-                    imageSize.dispatchEvent(new Event('input', { bubbles: true }));
-                    setImageSizeDropdownOpen(false);
-                    focusImageSizeWithoutOpening();
-                });
-                option.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        setImageSizeDropdownOpen(false);
-                        imageSize.focus();
-                    } else if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        const nextOption = imageSizeOptionButtons[index + 1] || imageSizeOptionButtons[0];
-                        nextOption.focus();
-                    } else if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        const prevOption = imageSizeOptionButtons[index - 1] || imageSizeOptionButtons[imageSizeOptionButtons.length - 1];
-                        prevOption.focus();
+            // 分辨率提示
+            imageSize.addEventListener('change', () => {
+                if (currentEngine !== 'gemini') return;
+                
+                const value = imageSize.value;
+                if (value === '512' && currentModelType !== 'flash') {
+                    if (currentModelType === 'pro') {
+                        resolutionTip.textContent = '⚠️ Pro系列模型不支持512分辨率，已自动切换为1K';
+                        imageSize.value = '1K';
+                    } else {
+                        resolutionTip.textContent = '⚠️ 当前自定义模型可能不支持512分辨率，请自行确认兼容性';
                     }
-                });
-            });
-            document.addEventListener('click', (e) => {
-                if (!imageSizeCombo.contains(e.target)) {
-                    setImageSizeDropdownOpen(false);
+                    resolutionTip.className = 'label-tip warning';
+                } else {
+                    resolutionTip.className = 'label-tip';
+                    if (currentModelType === 'flash') {
+                        resolutionTip.textContent = 'Flash系列支持：512/1K/2K/4K 全分辨率';
+                    } else if (currentModelType === 'pro') {
+                        resolutionTip.textContent = 'Pro系列支持：1K/2K/4K 分辨率';
+                    } else {
+                        resolutionTip.textContent = '自定义模型，请自行确认支持的分辨率与参数限制';
+                    }
                 }
+                consoleLog('info', `【参数修改】分辨率已修改为：${imageSize.value}`);
             });
-            document.addEventListener('focusin', (e) => {
-                if (!imageSizeCombo.contains(e.target)) {
-                    setImageSizeDropdownOpen(false);
-                }
-            });
-            // 重试与超时参数修改日志
+            // 高级参数修改日志
             maxRetries.addEventListener('change', () => {
                 consoleLog('info', `【参数修改】最大重试次数已修改为：${maxRetries.value}次`);
             });
@@ -3305,6 +3904,15 @@
             });
             retryDelay.addEventListener('change', () => {
                 consoleLog('info', `【参数修改】重试间隔已修改为：${retryDelay.value}毫秒`);
+            });
+            batchSize.addEventListener('change', () => {
+                consoleLog('info', `【参数修改】批次大小已修改为：${batchSize.value}`);
+            });
+            seed.addEventListener('change', () => {
+                consoleLog('info', `【参数修改】随机种子已修改为：${seed.value || '随机'}`);
+            });
+            topP.addEventListener('change', () => {
+                consoleLog('info', `【参数修改】top_p已修改为：${topP.value}`);
             });
             prompt.addEventListener('input', () => {
                 consoleLog('info', '【用户操作】提示词内容已更新');
@@ -3327,183 +3935,9 @@
                 consoleLog('info', `【用户操作】文件选择器上传图片，共${fileInput.files.length}个文件`);
                 fileInput.value = '';
             });
-
-            function readBlobAsDataUrl(blob) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        if (typeof reader.result === 'string') {
-                            resolve(reader.result);
-                            return;
-                        }
-                        reject(new Error('图片读取失败：FileReader结果格式异常'));
-                    };
-                    reader.onerror = () => reject(new Error('图片读取失败：FileReader读取异常'));
-                    reader.readAsDataURL(blob);
-                });
-            }
-
-            function loadImageFromBlob(blob) {
-                return new Promise((resolve, reject) => {
-                    const image = new Image();
-                    const objectUrl = URL.createObjectURL(blob);
-                    image.onload = () => {
-                        URL.revokeObjectURL(objectUrl);
-                        resolve(image);
-                    };
-                    image.onerror = () => {
-                        URL.revokeObjectURL(objectUrl);
-                        reject(new Error('图片解码失败，无法处理该图片'));
-                    };
-                    image.src = objectUrl;
-                });
-            }
-
-            function canvasToJpegBlob(canvas) {
-                return new Promise((resolve, reject) => {
-                    canvas.toBlob((blob) => {
-                        if (!blob) {
-                            reject(new Error('图片转换JPG失败：浏览器未返回有效数据'));
-                            return;
-                        }
-                        resolve(blob);
-                    }, REFERENCE_IMAGE_JPEG_MIME, REFERENCE_IMAGE_JPEG_QUALITY);
-                });
-            }
-
-            function getReferenceImageTargetSize(width, height, shouldLimitPixels) {
-                const safeWidth = Math.max(1, width);
-                const safeHeight = Math.max(1, height);
-                if (!shouldLimitPixels || safeWidth * safeHeight <= REFERENCE_IMAGE_MAX_PIXELS) {
-                    return { width: safeWidth, height: safeHeight, scaled: false };
-                }
-                const ratio = Math.sqrt(REFERENCE_IMAGE_MAX_PIXELS / (safeWidth * safeHeight));
-                return {
-                    width: Math.max(1, Math.floor(safeWidth * ratio)),
-                    height: Math.max(1, Math.floor(safeHeight * ratio)),
-                    scaled: true
-                };
-            }
-
-            function isJpegImageFile(file) {
-                const type = String(file.type || '').toLowerCase();
-                const name = String(file.name || '').toLowerCase();
-                if (type) return type === 'image/jpeg' || type === 'image/jpg';
-                return /\.(jpe?g)$/.test(name);
-            }
-
-            async function encodeImageElementToJpeg(image, targetSize) {
-                const canvas = document.createElement('canvas');
-                canvas.width = targetSize.width;
-                canvas.height = targetSize.height;
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    throw new Error('图片处理失败：浏览器不支持Canvas 2D上下文');
-                }
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                ctx.drawImage(image, 0, 0, targetSize.width, targetSize.height);
-                const blob = await canvasToJpegBlob(canvas);
-                return { blob, width: targetSize.width, height: targetSize.height, scaled: targetSize.scaled };
-            }
-
-            async function processReferenceImageFile(file) {
-                const normalizedFileName = file.name
-                    ? file.name.replace(/\.[^.]*$/, '') + '.jpg'
-                    : 'reference-image.jpg';
-                const fileIsJpeg = isJpegImageFile(file);
-                const createImageResult = async (blob, logMessage) => {
-                    const base64Url = await readBlobAsDataUrl(blob);
-                    const commaIndex = base64Url.indexOf(',');
-                    if (commaIndex === -1) {
-                        throw new Error('图片读取失败：Base64结果格式异常');
-                    }
-                    consoleLog('success', logMessage);
-                    return {
-                        name: normalizedFileName,
-                        mime_type: REFERENCE_IMAGE_JPEG_MIME,
-                        base64: base64Url.slice(commaIndex + 1),
-                        url: `data:${REFERENCE_IMAGE_JPEG_MIME};base64,${base64Url.slice(commaIndex + 1)}`
-                    };
-                };
-                if (fileIsJpeg && file.size <= REFERENCE_IMAGE_MAX_BYTES) {
-                    return await createImageResult(
-                        file,
-                        `图片 ${file.name} 保持JPG格式，大小：${(file.size / 1024).toFixed(2)}KB，小于500KB，无需缩放`
-                    );
-                }
-
-                const image = await loadImageFromBlob(file);
-                const originalSize = {
-                    width: Math.max(1, image.naturalWidth),
-                    height: Math.max(1, image.naturalHeight),
-                    scaled: false
-                };
-                if (fileIsJpeg && originalSize.width * originalSize.height <= REFERENCE_IMAGE_MAX_PIXELS) {
-                    return await createImageResult(
-                        file,
-                        `图片 ${file.name} 保持JPG格式，大小：${(file.size / 1024).toFixed(2)}KB，原始尺寸${originalSize.width}x${originalSize.height}（2K像素以内），无需缩放`
-                    );
-                }
-
-                let processed;
-                if (fileIsJpeg && file.size > REFERENCE_IMAGE_MAX_BYTES) {
-                    const targetSize = getReferenceImageTargetSize(originalSize.width, originalSize.height, true);
-                    processed = await encodeImageElementToJpeg(image, targetSize);
-                } else {
-                    processed = await encodeImageElementToJpeg(image, originalSize);
-                    if (
-                        originalSize.width * originalSize.height > REFERENCE_IMAGE_MAX_PIXELS &&
-                        processed.blob.size > REFERENCE_IMAGE_MAX_BYTES
-                    ) {
-                        const targetSize = getReferenceImageTargetSize(originalSize.width, originalSize.height, true);
-                        processed = await encodeImageElementToJpeg(image, targetSize);
-                    }
-                }
-                const base64Url = await readBlobAsDataUrl(processed.blob);
-                const commaIndex = base64Url.indexOf(',');
-                if (commaIndex === -1) {
-                    throw new Error('图片转换JPG失败：Base64结果格式异常');
-                }
-                const sizeInfo = `${(processed.blob.size / 1024).toFixed(2)}KB`;
-                const scaleInfo = processed.scaled
-                    ? `，已等比缩放至${processed.width}x${processed.height}（2K像素以内）`
-                    : `，尺寸${processed.width}x${processed.height}`;
-                consoleLog('success', `图片 ${file.name} 处理完成，格式：image/jpeg，质量：0.95，大小：${sizeInfo}${scaleInfo}`);
-                return {
-                    name: normalizedFileName,
-                    mime_type: REFERENCE_IMAGE_JPEG_MIME,
-                    base64: base64Url.slice(commaIndex + 1),
-                    url: base64Url
-                };
-            }
-
-            async function normalizeUploadedReferenceImages() {
-                await waitForPendingReferenceImages();
-                let changed = false;
-                for (let i = 0; i < uploadedImages.length; i++) {
-                    const img = uploadedImages[i];
-                    const dataUrl = `data:${img.mime_type};base64,${img.base64}`;
-                    const blob = await fetch(dataUrl).then(response => response.blob());
-                    if (img.mime_type === REFERENCE_IMAGE_JPEG_MIME) {
-                        if (blob.size <= REFERENCE_IMAGE_MAX_BYTES) continue;
-                        const image = await loadImageFromBlob(blob);
-                        if (image.naturalWidth * image.naturalHeight <= REFERENCE_IMAGE_MAX_PIXELS) continue;
-                    }
-                    const file = new File([blob], img.name || `reference-${i + 1}.jpg`, { type: img.mime_type || blob.type });
-                    uploadedImages[i] = await processReferenceImageFile(file);
-                    changed = true;
-                }
-                if (changed) {
-                    renderImageList();
-                    updateImageCount();
-                    consoleLog('success', '已将旧参考图数据统一转换为JPG格式');
-                }
-            }
-
-            function handleImageFiles(files) {
+            async function handleImageFiles(files) {
                 if (!files.length) return;
-                const remainingSlots = currentMaxImages - uploadedImages.length - pendingReferenceImageCount;
+                const remainingSlots = currentMaxImages - uploadedImages.length;
                 if (remainingSlots <= 0) {
                     const msg = `已达到最大上传数量（${currentMaxImages}张），无法继续上传`;
                     showError(msg);
@@ -3512,62 +3946,32 @@
                 }
                 const filesToProcess = Array.from(files).slice(0, remainingSlots);
                 consoleLog('info', `准备处理 ${filesToProcess.length} 张图片`);
-                const batchToken = ++referenceImageBatchToken;
-                const sessionToken = referenceImageSessionToken;
-                pendingReferenceImageCount += filesToProcess.length;
-                updateImageCount();
-                imageUploadQueue = imageUploadQueue
-                    .catch(() => {})
-                    .then(async () => {
-                        for (const file of filesToProcess) {
-                            try {
-                                if (sessionToken !== referenceImageSessionToken) {
-                                    continue;
-                                }
-                                if (uploadedImages.length >= currentMaxImages) {
-                                    consoleLog('warning', `图片 ${file.name} 未添加：已达到最大上传数量（${currentMaxImages}张）`);
-                                    continue;
-                                }
-                                if (!file.type.startsWith('image/') && !isJpegImageFile(file)) {
-                                    const msg = `文件 ${file.name} 不是有效的图片格式`;
-                                    showError(msg);
-                                    consoleLog('warning', msg);
-                                    continue;
-                                }
-                                const processedImage = await processReferenceImageFile(file);
-                                if (sessionToken !== referenceImageSessionToken) {
-                                    continue;
-                                }
-                                uploadedImages.push(processedImage);
-                                renderImageList();
-                                updateImageCount();
-                            } catch (error) {
-                                const msg = `图片 ${file.name} 处理失败：${error.message}`;
-                                showError(msg);
-                                consoleLog('error', msg, error);
-                            } finally {
-                                if (sessionToken === referenceImageSessionToken) {
-                                    pendingReferenceImageCount = Math.max(0, pendingReferenceImageCount - 1);
-                                    updateImageCount();
-                                }
-                            }
-                        }
-                        if (sessionToken === referenceImageSessionToken && batchToken === referenceImageBatchToken) {
-                            consoleLog('success', `本批参考图处理完成，当前共 ${uploadedImages.length} 张`);
-                        }
-                    })
-                    .finally(() => {
-                        if (sessionToken === referenceImageSessionToken) {
-                            pendingReferenceImageCount = Math.max(0, pendingReferenceImageCount);
-                            updateImageCount();
-                        }
-                    });
-            }
-            async function waitForPendingReferenceImages() {
-                if (pendingReferenceImageCount <= 0) return;
-                consoleLog('info', `等待 ${pendingReferenceImageCount} 张参考图处理完成后再发送请求`);
-                await imageUploadQueue;
+
+                const normalizedImages = [];
+                for (const file of filesToProcess) {
+                    if (!file.type.startsWith('image/')) {
+                        const msg = `文件 ${file.name} 不是有效的图片格式`;
+                        showError(msg);
+                        consoleLog('warning', msg);
+                        continue;
                     }
+                    try {
+                        const normalizedImage = await normalizeUploadImageToJpeg(file);
+                        normalizedImages.push(normalizedImage);
+                        consoleLog('success', `图片 ${file.name} 已处理为JPG，大小：${(normalizedImage.size / 1024).toFixed(2)}KB，格式：${normalizedImage.mime_type}${normalizedImage.width && normalizedImage.height ? `，尺寸：${normalizedImage.width}x${normalizedImage.height}` : ''}`);
+                    } catch (error) {
+                        const msg = `图片 ${file.name} 处理失败：${error.message || error}`;
+                        showError(msg);
+                        consoleLog('error', msg, error);
+                    }
+                }
+
+                if (normalizedImages.length > 0) {
+                    uploadedImages.push(...normalizedImages);
+                    renderImageList();
+                    updateImageCount();
+                }
+            }
             // 图片列表渲染
             function renderImageList() {
                 imageList.innerHTML = '';
@@ -3629,9 +4033,7 @@
             // 图片计数更新
             function updateImageCount() {
                 const count = uploadedImages.length;
-                imageCount.textContent = pendingReferenceImageCount > 0
-                    ? `已上传 ${count} 张图片，正在处理 ${pendingReferenceImageCount} 张`
-                    : `已上传 ${count} 张图片`;
+                imageCount.textContent = `已上传 ${count} 张图片`;
                 imageCount.className = 'image-count';
                 if (count >= currentMaxImages) imageCount.classList.add('danger');
                 else if (count >= currentMaxImages - 2) imageCount.classList.add('warning');
@@ -3640,24 +4042,26 @@
             resetBtn.addEventListener('click', () => {
                 if (confirm('确定要重置所有参数和已上传的图片吗？')) {
                     apiKey.value = '';
-                    baseUrl.value = 'http://localhost:8792/v1';
-                    proxyUpstream.value = DEFAULT_PROXY_UPSTREAM;
-                    apiEndpoint.value = '/responses';
-                    modelType.value = 'gpt-5.5';
-                    imageModel.value = 'gpt-image-2';
-                    imageSize.value = '1024x1792';
-                    syncImageSizeOptionState();
+                    apiBaseUrl.value = 'http://64.186.244.43:12001';
+                    customApiBaseUrl.classList.remove('show');
+                    customApiBaseUrlInput.value = '';
+                    
+                    // 重置到当前引擎的默认值
+                    updateEngineUI();
+                    
+                    batchSize.value = '1';
+                    seed.value = '';
+                    topP.value = '0.95';
                     prompt.value = '';
                     maxRetries.value = '3';
                     timeoutSeconds.value = '60';
                     retryDelay.value = '2000';
                     
-                    referenceImageSessionToken += 1;
-                    pendingReferenceImageCount = 0;
                     uploadedImages = [];
                     renderImageList();
                     updateImageCount();
-                    updateModelConfig();
+                    
+                    clearMaskImage();
                     
                     resetPreviewArea();
                     errorArea.classList.remove('show');
@@ -3668,6 +4072,75 @@
             // ==================== 延时函数 ====================
             function delay(ms) {
                 return new Promise(resolve => setTimeout(resolve, ms));
+            }
+            // ==================== 核心请求函数 ====================
+            async function makeRequest(requestUrl, requestBody, timeoutMs, isFormData = false) {
+                abortController = new AbortController();
+                const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+                try {
+                    consoleLog('info', '发起请求，使用自动拼接的API地址');
+                    consoleLog('info', '最终请求URL', requestUrl);
+                    
+                    const apiKeyValue = apiKey.value.trim();
+                    const requestHeaders = {
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${apiKeyValue}`,
+                        "X-API-Key": apiKeyValue,
+                        "X-Banana-Client": "comfyui-banana-li"
+                    };
+                    
+                    // FormData请求不需要设置Content-Type
+                    if (!isFormData) {
+                        requestHeaders["Content-Type"] = "application/json";
+                    }
+                    
+                    consoleLog('info', '请求头', {
+                        ...requestHeaders,
+                        "Authorization": "[OMITTED, API KEY HIDDEN]",
+                        "X-API-Key": "[OMITTED, API KEY HIDDEN]"
+                    });
+                    
+                    const fetchOptions = {
+                        method: 'POST',
+                        headers: requestHeaders,
+                        signal: abortController.signal
+                    };
+                    
+                    if (isFormData) {
+                        fetchOptions.body = requestBody;
+                        consoleLog('info', '请求体：FormData 格式（包含二进制数据，已省略）');
+                    } else {
+                        fetchOptions.body = JSON.stringify(requestBody);
+                        consoleLog('info', '请求体', requestBody, true);
+                    }
+                    
+                    const response = await fetch(requestUrl, fetchOptions);
+                    clearTimeout(timeoutId);
+                    consoleLog('success', `收到响应，状态码：${response.status} ${response.statusText}`);
+                    const responseHeaders = {};
+                    response.headers.forEach((value, key) => {
+                        responseHeaders[key] = value;
+                    });
+                    consoleLog('info', '响应头', responseHeaders);
+                    if (!response.ok) {
+                        let errorDetail = '';
+                        try { errorDetail = await response.json(); }
+                        catch { errorDetail = await response.text(); }
+                        consoleLog('error', '请求失败，错误详情', errorDetail);
+                        throw { status: response.status, detail: errorDetail };
+                    }
+                    const result = await response.json();
+                    consoleLog('success', '响应数据解析成功', result, false);
+                    return result;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        consoleLog('error', `请求超时（超过 ${timeoutMs/1000} 秒）`);
+                        throw { isTimeout: true, message: `请求超时（超过 ${timeoutMs/1000} 秒）` };
+                    }
+                    consoleLog('error', '请求发生异常', error);
+                    throw error;
+                }
             }
             // ==================== 预览区操作函数 ====================
             function resetPreviewArea() {
@@ -3733,64 +4206,52 @@
                 showToast('已在新标签页打开，可右键选择系统照片查看器', 'info');
                 consoleLog('info', '【用户操作】已在新标签页打开图像');
             });
-            // ==================== 图像生成调用流程 ====================
-            async function generateAsxsApiImage(requestImageSize = null) {
-                // 1. 拼接最终请求地址
-                const baseUrlRaw = baseUrl.value.trim().replace(/\/$/, '');
-                const endpointRaw = apiEndpoint.value.trim().replace(/^\//, '');
-                const finalRequestUrl = `${baseUrlRaw}/${endpointRaw}`;
-                const finalImageSize = requestImageSize || normalizeImageSizeForRequest(imageSize.value.trim());
-
-                // 2. 构建 Responses input 内容数组
-                const content = [
-                    {
-                        type: "input_text",
-                        text: `请生成一张图像，图像要求如下：${prompt.value.trim()}`
+            // ==================== 【修复】GPT-image-2 文生图核心逻辑（同时支持b64_json和url） ====================
+            async function generateGptImageText() {
+                const finalBaseUrl = apiBaseUrl.value === 'custom' ? customApiBaseUrlInput.value.trim() : apiBaseUrl.value;
+                const finalRequestUrl = buildGptImageUrl(finalBaseUrl, 'generations');
+                // 新增：处理自定义尺寸
+                let finalSize = imageSize.value;
+                if (finalSize === 'custom') {
+                    // 解析用户输入（自动去除所有空格，兼容"3547 x 1569"格式）
+                    const cleanInput = customSize.value.trim().replace(/\s+/g, '');
+                    const [widthStr, heightStr] = cleanInput.split('x');
+                    const width = parseInt(widthStr, 10);
+                    const height = parseInt(heightStr, 10);
+                    // 格式验证
+                    if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+                        throw new Error('自定义尺寸格式错误，请输入正确格式：宽x高（如3547x1569）');
                     }
-                ];
-                uploadedImages.forEach(img => {
-                    const dataUrl = `data:${img.mime_type};base64,${img.base64}`;
-                    content.push({
-                        type: "input_image",
-                        image_url: dataUrl
-                    });
-                });
-
-                // 3. 构建最终请求体
+                    // 尺寸范围限制（GPT模型通用限制，可根据实际情况调整）
+                    const MIN_SIZE = 128;
+                    const MAX_SIZE = 8192;
+                    if (width < MIN_SIZE || height < MIN_SIZE) {
+                        throw new Error(`自定义尺寸不能小于${MIN_SIZE}x${MIN_SIZE}`);
+                    }
+                    if (width > MAX_SIZE || height > MAX_SIZE) {
+                        throw new Error(`自定义尺寸不能大于${MAX_SIZE}x${MAX_SIZE}`);
+                    }
+                    // 自动调整为16的倍数
+                    const adjusted = adjustSizeTo16Multiple(width, height);
+                    finalSize = adjusted.size;
+                    // 日志和用户提示
+                    consoleLog('info', `【自定义尺寸】原始尺寸：${width}x${height}，自动调整为：${finalSize}`);
+                    showToast(`尺寸已自动调整为 ${finalSize}（16的倍数）`, 'info');
+                }
                 const requestBody = {
+                    prompt: prompt.value.trim(),
                     model: modelType.value.trim(),
-                    input: [
-                        {
-                            role: "user",
-                            content: content
-                        }
-                    ],
-                    tools: [
-                        {
-                            type: "image_generation",
-                            model: imageModel.value.trim(),
-                            size: finalImageSize,
-                            quality: "high",
-                            output_format: "png",
-                            background: "auto"
-                        }
-                    ],
-                    tool_choice: {
-                        type: "image_generation"
-                    },
-                    store: false,
-                    stream: false,
-                    include: [
-                        "reasoning.encrypted_content"
-                    ]
+                    n: parseInt(batchSize.value),
+                    size: finalSize, // ✅ 修复：使用调整后的尺寸
+                    moderation: "low",
+                    quality: "high"
                 };
-
-                // 4. 重试逻辑
+                // 重试逻辑
+                let result = null;
                 let lastError = null;
-                const maxRetryCount = parseInt(maxRetries.value, 10) || 0;
-                const timeoutMs = (parseInt(timeoutSeconds.value, 10) || 60) * 1000;
-                const retryWaitMs = parseInt(retryDelay.value, 10) || 2000;
-
+                const maxRetryCount = parseInt(maxRetries.value) || 0;
+                const timeoutMs = parseInt(timeoutSeconds.value) * 1000 || 60000;
+                const retryWaitMs = parseInt(retryDelay.value) || 2000;
                 for (let attempt = 0; attempt <= maxRetryCount; attempt++) {
                     if (attempt > 0) {
                         consoleLog('warning', `第 ${attempt} 次重试，等待 ${retryWaitMs}ms...`);
@@ -3798,19 +4259,9 @@
                     }
                     try {
                         consoleLog('info', `尝试请求（第 ${attempt + 1}/${maxRetryCount + 1} 次）`);
-                        consoleLog('info', `模型名称：${modelType.value.trim()}`);
-                        consoleLog('info', `image-model：${imageModel.value.trim()}`);
-                        consoleLog('info', `图像尺寸：${finalImageSize}`);
-                        consoleLog('info', `最终请求地址：${finalRequestUrl}`);
-                        consoleLog('info', `参考图数量：${uploadedImages.length} 张`);
-
-                        return await requestResponsesApi(
-                            finalRequestUrl,
-                            requestBody,
-                            timeoutMs,
-                            '提交生成任务'
-                        );
-
+                        result = await makeRequest(finalRequestUrl, requestBody, timeoutMs);
+                        lastError = null;
+                        break;
                     } catch (error) {
                         lastError = error;
                         const shouldRetry = attempt < maxRetryCount && (
@@ -3822,17 +4273,192 @@
                             consoleLog('error', '错误不可重试或已达最大重试次数');
                             break;
                         }
-                        consoleLog('warning', '检测到可重试错误，准备重试', error);
+                        consoleLog('warning', '检测到可重试错误，准备重试');
                     }
                 }
-
-                // 错误处理
                 if (lastError) {
                     if (lastError.isTimeout) throw new Error(lastError.message);
-                    const detail = lastError.detail || (lastError.message || '无错误详情');
-                    throw new Error(`HTTP ${lastError.status || '未知'}\n\n请求地址：${finalRequestUrl}\n\n错误详情：\n${detail}`);
+                    else throw new Error(`HTTP ${lastError.status || '未知'}\n\n请求地址：${finalRequestUrl}\n\n错误详情：\n${JSON.stringify(lastError.detail, null, 2)}`);
                 }
-                throw new Error('生成失败：未知错误');
+
+                // 统一响应图像解析：兼容Base64与URL，支持多字段遍历
+                return await extractImageDataFromResponse(result, finalRequestUrl);
+            }
+
+            // ==================== 【修复】GPT-image-2 图像编辑核心逻辑（同时支持b64_json和url） ====================
+            async function generateGptImageEdit() {
+                const finalBaseUrl = apiBaseUrl.value === 'custom' ? customApiBaseUrlInput.value.trim() : apiBaseUrl.value;
+                const finalRequestUrl = buildGptImageUrl(finalBaseUrl, 'edits');
+
+                // 构建FormData
+                const formdata = new FormData();
+
+                // 添加所有参考图
+                uploadedImages.forEach((img, index) => {
+                    const byteCharacters = atob(img.base64);
+                    const byteArray = new Uint8Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteArray[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const blob = new Blob([byteArray], { type: img.mime_type });
+                    formdata.append("image", blob, img.name);
+                    consoleLog('info', `添加参考图 ${index + 1}：${img.name} (${img.mime_type})`);
+                });
+
+                // 添加蒙版（如果有）
+                if (maskImage) {
+                    const byteCharacters = atob(maskImage.base64);
+                    const byteArray = new Uint8Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteArray[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const blob = new Blob([byteArray], { type: maskImage.mime_type });
+                    formdata.append("mask", blob, "蒙版.png");
+                    consoleLog('info', `添加蒙版：${maskImage.name} (${maskImage.mime_type})`);
+                }
+
+                // 新增：处理自定义尺寸（和文生图逻辑完全一致）
+                let finalSize = imageSize.value;
+                if (finalSize === 'custom') {
+                    const cleanInput = customSize.value.trim().replace(/\s+/g, '');
+                    const [widthStr, heightStr] = cleanInput.split('x');
+                    const width = parseInt(widthStr, 10);
+                    const height = parseInt(heightStr, 10);
+                    if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+                        throw new Error('自定义尺寸格式错误，请输入正确格式：宽x高（如3547x1569）');
+                    }
+                    const MIN_SIZE = 128;
+                    const MAX_SIZE = 8192;
+                    if (width < MIN_SIZE || height < MIN_SIZE) {
+                        throw new Error(`自定义尺寸不能小于${MIN_SIZE}x${MIN_SIZE}`);
+                    }
+                    if (width > MAX_SIZE || height > MAX_SIZE) {
+                        throw new Error(`自定义尺寸不能大于${MAX_SIZE}x${MAX_SIZE}`);
+                    }
+                    const adjusted = adjustSizeTo16Multiple(width, height);
+                    finalSize = adjusted.size;
+                    consoleLog('info', `【自定义尺寸】原始尺寸：${width}x${height}，自动调整为：${finalSize}`);
+                    showToast(`尺寸已自动调整为 ${finalSize}（16的倍数）`, 'info');
+                }
+                // 添加其他参数
+                formdata.append("prompt", prompt.value.trim());
+                formdata.append("model", modelType.value.trim());
+                formdata.append("n", batchSize.value);
+                formdata.append("size", finalSize); // ✅ 修复：使用调整后的尺寸
+
+                // 重试逻辑
+                let result = null;
+                let lastError = null;
+                const maxRetryCount = parseInt(maxRetries.value) || 0;
+                const timeoutMs = parseInt(timeoutSeconds.value) * 1000 || 60000;
+                const retryWaitMs = parseInt(retryDelay.value) || 2000;
+                for (let attempt = 0; attempt <= maxRetryCount; attempt++) {
+                    if (attempt > 0) {
+                        consoleLog('warning', `第 ${attempt} 次重试，等待 ${retryWaitMs}ms...`);
+                        await delay(retryWaitMs);
+                    }
+                    try {
+                        consoleLog('info', `尝试请求（第 ${attempt + 1}/${maxRetryCount + 1} 次）`);
+                        result = await makeRequest(finalRequestUrl, formdata, timeoutMs, true);
+                        lastError = null;
+                        break;
+                    } catch (error) {
+                        lastError = error;
+                        const shouldRetry = attempt < maxRetryCount && (
+                            error.isTimeout ||
+                            (error.status && error.status >= 500) ||
+                            error.status === 429
+                        );
+                        if (!shouldRetry) {
+                            consoleLog('error', '错误不可重试或已达最大重试次数');
+                            break;
+                        }
+                        consoleLog('warning', '检测到可重试错误，准备重试');
+                    }
+                }
+                if (lastError) {
+                    if (lastError.isTimeout) throw new Error(lastError.message);
+                    else throw new Error(`HTTP ${lastError.status || '未知'}\n\n请求地址：${finalRequestUrl}\n\n错误详情：\n${JSON.stringify(lastError.detail, null, 2)}`);
+                }
+
+                // 统一响应图像解析：兼容Base64与URL，支持多字段遍历
+                return await extractImageDataFromResponse(result, finalRequestUrl);
+            }
+            // ==================== 【原】Gemini 图像生成核心逻辑 ====================
+            async function generateGeminiImage() {
+                const finalBaseUrl = apiBaseUrl.value === 'custom' ? customApiBaseUrlInput.value.trim() : apiBaseUrl.value;
+                const finalRequestUrl = buildGenerateContentUrl(finalBaseUrl, modelType.value.trim());
+                const contents = [
+                    {
+                        role: "user",
+                        parts: [ 
+                            { 
+                                text: `${prompt.value.trim()} [分辨率: ${imageSize.value}, 比例: ${aspectRatio.value}]`
+                            }
+                        ]
+                    }
+                ];
+                uploadedImages.forEach((img, index) => {
+                    contents[0].parts.push({
+                        inlineData: {
+                            mimeType: img.mime_type,
+                            data: img.base64
+                        }
+                    });
+                    consoleLog('info', `添加参考图 ${index + 1}：${img.name} (${img.mime_type})，大小：${(img.base64.length * 0.75 / 1024).toFixed(2)}KB`);
+                });
+                const generationConfig = {
+                    topP: parseFloat(topP.value),
+                    responseModalities: ["TEXT", "IMAGE"],
+                    batchSize: parseInt(batchSize.value),
+                    imageConfig: {
+                        aspectRatio: aspectRatio.value,
+                        imageSize: imageSize.value
+                    }
+                };
+                if (seed.value.trim() !== '') {
+                    generationConfig.seed = parseInt(seed.value);
+                }
+                const requestBody = {
+                    contents: contents,
+                    generationConfig: generationConfig
+                };
+                // 重试逻辑
+                let result = null;
+                let lastError = null;
+                const maxRetryCount = parseInt(maxRetries.value) || 0;
+                const timeoutMs = parseInt(timeoutSeconds.value) * 1000 || 60000;
+                const retryWaitMs = parseInt(retryDelay.value) || 2000;
+                for (let attempt = 0; attempt <= maxRetryCount; attempt++) {
+                    if (attempt > 0) {
+                        consoleLog('warning', `第 ${attempt} 次重试，等待 ${retryWaitMs}ms...`);
+                        await delay(retryWaitMs);
+                    }
+                    try {
+                        consoleLog('info', `尝试请求（第 ${attempt + 1}/${maxRetryCount + 1} 次）`);
+                        result = await makeRequest(finalRequestUrl, requestBody, timeoutMs);
+                        lastError = null;
+                        break;
+                    } catch (error) {
+                        lastError = error;
+                        const shouldRetry = attempt < maxRetryCount && (
+                            error.isTimeout ||
+                            (error.status && error.status >= 500) ||
+                            error.status === 429
+                        );
+                        if (!shouldRetry) {
+                            consoleLog('error', '错误不可重试或已达最大重试次数');
+                            break;
+                        }
+                        consoleLog('warning', '检测到可重试错误，准备重试');
+                    }
+                }
+                if (lastError) {
+                    if (lastError.isTimeout) throw new Error(lastError.message);
+                    else throw new Error(`HTTP ${lastError.status || '未知'}\n\n请求地址：${finalRequestUrl}\n\n错误详情：\n${JSON.stringify(lastError.detail, null, 2)}`);
+                }
+                // 统一响应图像解析：兼容Base64与URL，支持多字段遍历
+                return await extractImageDataFromResponse(result, finalRequestUrl);
             }
             // ==================== 统一生成入口 ====================
             generateBtn.addEventListener('click', async () => {
@@ -3847,16 +4473,9 @@
                     consoleLog('error', msg);
                     return;
                 }
-                const baseUrlRaw = baseUrl.value.trim();
-                if (!baseUrlRaw) {
-                    const msg = '请输入有效的Base URL';
-                    showError(msg);
-                    consoleLog('error', msg);
-                    return;
-                }
-                const endpointRaw = apiEndpoint.value.trim();
-                if (!endpointRaw) {
-                    const msg = '请输入有效的API端点';
+                let finalBaseUrl = apiBaseUrl.value === 'custom' ? customApiBaseUrlInput.value.trim() : apiBaseUrl.value;
+                if (!finalBaseUrl) {
+                    const msg = '请输入有效的API基础地址';
                     showError(msg);
                     consoleLog('error', msg);
                     return;
@@ -3867,92 +4486,113 @@
                     consoleLog('error', msg);
                     return;
                 }
-                if (!imageModel.value.trim()) {
-                    const msg = '请输入image-model';
-                    showError(msg);
-                    consoleLog('error', msg);
-                    return;
-                }
-                if (!imageSize.value.trim()) {
-                    const msg = '请输入图像尺寸';
-                    showError(msg);
-                    consoleLog('error', msg);
-                    return;
-                }
                 if (!prompt.value.trim()) {
                     const msg = '请输入生成提示词';
                     showError(msg);
                     consoleLog('error', msg);
                     return;
                 }
-                let requestImageSize = null;
-                try {
-                    requestImageSize = normalizeImageSizeForRequest(imageSize.value.trim());
-                } catch (error) {
-                    showError(error.message);
-                    consoleLog('error', error.message, error);
-                    return;
-                }
-                isGenerating = true;
-                generateBtn.disabled = true;
-                loadingIcon.style.display = 'inline-block';
-                previewLoading.style.display = 'block';
-                previewStatus.textContent = pendingReferenceImageCount > 0 ? '正在处理参考图...' : '准备生成中...';
-                try {
-                    await normalizeUploadedReferenceImages();
-                } catch (error) {
-                    const msg = `参考图处理未完成：${error.message}`;
-                    showError(msg);
-                    consoleLog('error', msg, error);
-                    isGenerating = false;
-                    generateBtn.disabled = false;
-                    loadingIcon.style.display = 'none';
-                    previewLoading.style.display = 'none';
-                    previewStatus.textContent = '参考图处理失败';
-                    return;
+                // 新增：GPT自定义尺寸提前验证
+                if ((currentEngine === 'gpt-image-2-text' || currentEngine === 'gpt-image-2-edit') && imageSize.value === 'custom') {
+                    if (!customSize.value.trim()) {
+                        const msg = '请输入自定义尺寸';
+                        showError(msg);
+                        consoleLog('error', msg);
+                        return;
+                    }
+                    // 提前验证格式，避免进入生成逻辑后才报错
+                    const sizePattern = /^\d+\s*x\s*\d+$/;
+                    if (!sizePattern.test(customSize.value.trim())) {
+                        const msg = '自定义尺寸格式错误，请输入正确格式：宽x高（如3547x1569）';
+                        showError(msg);
+                        consoleLog('error', msg);
+                        return;
+                    }
                 }
                 consoleLog('info', '【用户操作】点击生成按钮，开始参数校验，所有必填项校验通过');
                 
-                // ==================== 生成参数快照 ====================
+                // ==================== 修复：生成参数快照包含蒙版数据 ====================
                 const referenceImagesSnapshot = uploadedImages.map(img => ({
                     name: img.name,
                     mime_type: img.mime_type,
                     base64: img.base64
                 }));
+                const maskSnapshot = maskImage ? {
+                    name: maskImage.name,
+                    mime_type: maskImage.mime_type,
+                    base64: maskImage.base64
+                } : null;
+                // 计算最终尺寸（如果是自定义模式）
+                let finalSize = imageSize.value;
+                let customSizeValue = customSize.value.trim();
+                if (finalSize === 'custom' && customSizeValue) {
+                    const cleanInput = customSizeValue.replace(/\s+/g, '');
+                    const [widthStr, heightStr] = cleanInput.split('x');
+                    const width = parseInt(widthStr, 10);
+                    const height = parseInt(heightStr, 10);
+                    if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
+                        const adjusted = adjustSizeTo16Multiple(width, height);
+                        finalSize = adjusted.size;
+                    }
+                }
                 currentGenerationParamsSnapshot = {
-                    engine: 'asxs-api-responses-image-generate',
+                    engine: currentEngine,
                     apiKey: apiKey.value.trim(),
-                    baseUrl: baseUrlRaw,
-                    proxyUpstream: proxyUpstream.value,
-                    apiEndpoint: endpointRaw,
+                    apiBaseUrl: apiBaseUrl.value,
+                    customApiBaseUrl: customApiBaseUrlInput.value.trim(),
                     modelType: modelType.value.trim(),
-                    imageModel: imageModel.value.trim(),
-                    imageSize: requestImageSize,
+                    imageSize: imageSize.value,
+                    customSizeValue: customSizeValue, // 保存用户原始输入
+                    finalSize: finalSize, // 保存实际生成的尺寸
+                    aspectRatio: currentEngine === 'gemini' ? aspectRatio.value : null,
+                    batchSize: batchSize.value,
+                    seed: currentEngine === 'gemini' ? seed.value.trim() : null,
+                    topP: currentEngine === 'gemini' ? topP.value : null,
                     prompt: prompt.value.trim(),
                     maxRetries: maxRetries.value,
                     timeoutSeconds: timeoutSeconds.value,
                     retryDelay: retryDelay.value,
-                    referenceImages: referenceImagesSnapshot
+                    referenceImages: referenceImagesSnapshot,
+                    maskImage: maskSnapshot
                 };
                 consoleLog('info', '【历史记录】已创建生成参数快照，将用于后续历史记录保存');
                 // ==================== 生成参数快照结束 ====================
                 resetPreviewArea();
                 errorArea.classList.remove('show');
                 
+                isGenerating = true;
+                generateBtn.disabled = true;
+                loadingIcon.style.display = 'inline-block';
                 previewLoading.style.display = 'block';
                 previewStatus.textContent = '正在生成中...';
                 consoleLog('info', '========== 开始新的生成请求 ==========');
-                consoleLog('info', `使用调用核心：${getProxyUpstreamLabel(proxyUpstream.value)}`);
-                consoleLog('info', `模型名称：${modelType.value.trim()}`);
-                consoleLog('info', `image-model：${imageModel.value.trim()}`);
-                consoleLog('info', `图像尺寸：${requestImageSize}`);
-                consoleLog('info', `Base URL：${baseUrlRaw}`);
-                consoleLog('info', `Proxy Upstream：${getProxyUpstreamLabel(proxyUpstream.value)}`);
-                consoleLog('info', `API端点：${endpointRaw}`);
+                consoleLog('info', `使用引擎：${currentEngine}`);
+                consoleLog('info', `使用模型：${modelType.value.trim()}`);
+                consoleLog('info', `分辨率：${imageSize.value}`);
+                if (currentEngine === 'gemini') {
+                    consoleLog('info', `宽高比：${aspectRatio.value}`);
+                }
+                consoleLog('info', `批次大小：${batchSize.value}`);
                 consoleLog('info', `参考图数量：${uploadedImages.length}`);
+                if (currentEngine === 'gpt-image-2-edit' && maskImage) {
+                    consoleLog('info', `包含蒙版：${maskImage.name}`);
+                }
                 consoleLog('info', `最大重试次数：${maxRetries.value}，超时：${timeoutSeconds.value}秒`);
                 try {
-                    const imageResult = await generateAsxsApiImage(requestImageSize);
+                    let imageResult;
+                    switch (currentEngine) {
+                        case 'gemini':
+                            imageResult = await generateGeminiImage();
+                            break;
+                        case 'gpt-image-2-text':
+                            imageResult = await generateGptImageText();
+                            break;
+                        case 'gpt-image-2-edit':
+                            imageResult = await generateGptImageEdit();
+                            break;
+                        default:
+                            throw new Error('未知的生成引擎');
+                    }
                     const { imageBase64, imageMimeType } = imageResult;
                     // 图像渲染
                     const byteCharacters = atob(imageBase64);
@@ -3974,6 +4614,7 @@
                     consoleLog('success', '========== 生成请求成功完成 ==========');
                     
                     // 保存到历史记录
+                    const thumbnail = await history_createThumbnail(imageBase64, imageMimeType);
                     history_saveToDB(imageBase64, imageMimeType, currentGenerationParamsSnapshot).catch(err => {
                         consoleLog('error', '【历史记录】保存失败', err);
                         showToast('保存历史记录失败', 'error');
@@ -4002,8 +4643,7 @@
                 errorArea.scrollIntoView({ behavior: 'smooth' });
             }
             // 初始化
-            syncImageSizeOptionState();
-            updateModelConfig();
+            updateEngineUI();
             // ==================== 【迁移新增】初始化历史记录 ====================
             history_initDB()
                 .then(() => history_loadFromDB())
